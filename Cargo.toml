@@ -7,14 +7,3 @@ edition = "2021"
 
 [dependencies]
 thiserror = "1.0.50"
-
-[dev-dependencies]
-criterion = "0.3"
-proptest = "1.0.0"
-
-[[bench]]
-name = "conversion"
-harness = false
-
-[[example]]
-name = "hello"
