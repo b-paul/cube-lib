@@ -10,10 +10,10 @@ use thiserror::Error;
 // it would be nice if there was a way to include the name of the enum in the error message!
 /// Error type for converting integers to (C like) enums using TryFrom
 #[derive(Debug, Error)]
-pub enum TryFromIntToEnumError  {
+pub enum TryFromIntToEnumError {
     /// attempted to convert integer into enum value, but integer was out of bounds
     #[error("attempted to convert integer into enum value, but integer was out of bounds")]
-    OutOfBounds
+    OutOfBounds,
 }
 
 pub mod cube333;
