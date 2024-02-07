@@ -9,27 +9,6 @@ struct EOCoord(u16);
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
 struct EPCoord(u32);
 
-impl From<COCoord> for usize {
-    fn from(coord: COCoord) -> usize {
-        coord.0 as usize
-    }
-}
-impl From<CPCoord> for usize {
-    fn from(coord: CPCoord) -> usize {
-        coord.0 as usize
-    }
-}
-impl From<EOCoord> for usize {
-    fn from(coord: EOCoord) -> usize {
-        coord.0 as usize
-    }
-}
-impl From<EPCoord> for usize {
-    fn from(coord: EPCoord) -> usize {
-        coord.0 as usize
-    }
-}
-
 /// Implementation of a coord cube, representing pieces using coordinates, which are values which
 /// are isomorphic to arrays represented in a cubie cube.
 #[derive(Debug, PartialEq, Eq)]
