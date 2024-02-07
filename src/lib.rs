@@ -2,7 +2,6 @@
 //! related to them. This is mostly for personal use.
 
 #![deny(missing_docs)]
-#![feature(slice_group_by)]
 
 use thiserror::Error;
 
