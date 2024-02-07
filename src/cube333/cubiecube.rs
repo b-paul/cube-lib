@@ -1,14 +1,18 @@
-use super::{CubieCube, CornerTwist, EdgeFlip};
+use super::{CornerTwist, CubieCube, EdgeFlip};
 
 impl CubieCube {
     /// Returns the sum of corner orientations over the cube, represented as a corner orientation.
     pub fn co_parity(&self) -> CornerTwist {
-        self.co.into_iter().fold(CornerTwist::Oriented, |acc, ct| acc.twist_by(ct))
+        self.co
+            .into_iter()
+            .fold(CornerTwist::Oriented, |acc, ct| acc.twist_by(ct))
     }
 
     /// Returns the sum of edge orientations over the cube, represented as an edge orientation.
     pub fn eo_parity(&self) -> EdgeFlip {
-        self.eo.into_iter().fold(EdgeFlip::Oriented, |acc, ef| acc.flip_by(ef))
+        self.eo
+            .into_iter()
+            .fold(EdgeFlip::Oriented, |acc, ef| acc.flip_by(ef))
     }
 
     // The parity of a permutation is equal to the sum over each cycle of (elems in cycle - 1).
@@ -56,8 +60,8 @@ impl CubieCube {
     /// Return true if the corresponding cube is illegal due to a corner twist, an edge flip or by
     /// permutation parity.
     pub fn illegal(&self) -> bool {
-        self.co_parity() != CornerTwist::Oriented ||
-        self.eo_parity() != EdgeFlip::Oriented ||
-        self.perm_parity()
+        self.co_parity() != CornerTwist::Oriented
+            || self.eo_parity() != EdgeFlip::Oriented
+            || self.perm_parity()
     }
 }

@@ -53,10 +53,7 @@ impl crate::moves::Move for Move333 {
             if count == 0 {
                 Cancellation::NoMove
             } else {
-                Cancellation::OneMove(Move333 {
-                    ty: self.ty,
-                    count,
-                })
+                Cancellation::OneMove(Move333 { ty: self.ty, count })
             }
         } else {
             Cancellation::TwoMove(self, b)
