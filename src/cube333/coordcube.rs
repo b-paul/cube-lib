@@ -127,8 +127,15 @@ impl std::fmt::Display for CubieToCoordError {
 }
 impl std::error::Error for CubieToCoordError {}
 
+impl TryInto<CoordCube> for CubieCube {
+    type Error = CubieToCoordError;
+
+    fn try_into(self) -> Result<CoordCube, CubieToCoordError> {
+        self.to_coord()
+    }
+}
+
 impl CubieCube {
-    // TODO move this into a TryInto
     /// Tries to convert a `CubieCube` to a `CoordCube`.
     pub fn to_coord(&self) -> Result<CoordCube, CubieToCoordError> {
         if self.illegal() {
