@@ -110,7 +110,7 @@ fn to_p_coord<const COUNT: usize>(arr: &[u8; COUNT]) -> u32 {
 /// Error for when converting from a `CubieCube` to a `CoordCube`.
 /// Errors can occur in this case when the `CubieCube` is in an illegal state caused by an edge
 /// flip, a corner twist, or permutation parity.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct CubieToCoordError {
     /// The edge flip coset we are in.
     pub eo: EdgeFlip,
@@ -122,25 +122,13 @@ pub struct CubieToCoordError {
 
 impl std::fmt::Display for CubieToCoordError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // idk how i feel about this :grimacing:
-        if self.eo == EdgeFlip::Flipped {
-            writeln!(f, "This cube has a flipped edge!")?;
-        }
-        if self.co == CornerTwist::Clockwise {
-            writeln!(f, "This cube has a clockwise twisted corner!")?;
-        }
-        if self.co == CornerTwist::AntiClockwise {
-            writeln!(f, "This cube has an anticlockwise twisted corner!")?;
-        }
-        if self.perm {
-            writeln!(f, "This cube has permutation parity!")?;
-        }
-        Ok(())
+        f.write_str("a cube was in an illegal state")
     }
 }
 impl std::error::Error for CubieToCoordError {}
 
 impl CubieCube {
+    // TODO move this into a TryInto
     /// Tries to convert a `CubieCube` to a `CoordCube`.
     pub fn to_coord(&self) -> Result<CoordCube, CubieToCoordError> {
         if self.illegal() {
@@ -163,11 +151,12 @@ impl CubieCube {
 #[cfg(test)]
 mod tests {
     use crate::cube333::{
-        coordcube::CoordCube,
+        coordcube::{CoordCube, CubieToCoordError},
         moves::{Move333, Move333Type},
-        CubieCube, StickerCube,
+        Corner, CornerTwist, CubieCube, Edge, EdgeFlip, StickerCube,
     };
     use crate::mv;
+
     #[test]
     fn invertable_conversion() {
         assert_eq!(CubieCube::SOLVED.to_coord().unwrap(), CoordCube::SOLVED);
@@ -183,5 +172,67 @@ mod tests {
             StickerCube::from(cube.clone().to_coord().unwrap().to_cubie())
         );
         assert_eq!(cube.to_coord().unwrap().to_cubie(), cube);
+    }
+
+    #[test]
+    fn conversion_errors() {
+        let mut twist = CubieCube::SOLVED;
+        twist.co[0] = CornerTwist::Clockwise;
+        assert_eq!(
+            twist.to_coord(),
+            Err(CubieToCoordError {
+                eo: EdgeFlip::Oriented,
+                co: CornerTwist::Clockwise,
+                perm: false,
+            })
+        );
+        twist.co[1] = CornerTwist::Clockwise;
+        assert_eq!(
+            twist.to_coord(),
+            Err(CubieToCoordError {
+                eo: EdgeFlip::Oriented,
+                co: CornerTwist::AntiClockwise,
+                perm: false,
+            })
+        );
+        twist.co[2] = CornerTwist::AntiClockwise;
+        assert_eq!(
+            twist.to_coord(),
+            Err(CubieToCoordError {
+                eo: EdgeFlip::Oriented,
+                co: CornerTwist::Clockwise,
+                perm: false,
+            })
+        );
+        twist.co[2] = CornerTwist::Clockwise;
+        assert!(twist.to_coord().is_ok());
+
+        let mut flip = CubieCube::SOLVED;
+        flip.eo[0] = EdgeFlip::Flipped;
+        assert_eq!(
+            flip.to_coord(),
+            Err(CubieToCoordError {
+                eo: EdgeFlip::Flipped,
+                co: CornerTwist::Oriented,
+                perm: false,
+            })
+        );
+        flip.eo[1] = EdgeFlip::Flipped;
+        assert!(flip.to_coord().is_ok());
+
+        let mut swap = CubieCube::SOLVED;
+        swap.ep[0] = Edge::UR;
+        swap.ep[3] = Edge::UF;
+        assert_eq!(
+            swap.to_coord(),
+            Err(CubieToCoordError {
+                eo: EdgeFlip::Oriented,
+                co: CornerTwist::Oriented,
+                perm: true,
+            })
+        );
+        swap.cp[0] = Corner::UBR;
+        swap.cp[3] = Corner::UFR;
+        assert!(swap.to_coord().is_ok());
     }
 }
