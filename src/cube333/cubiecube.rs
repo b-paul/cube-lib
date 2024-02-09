@@ -52,7 +52,8 @@ impl CubieCube {
         parity
     }
 
-    /// Return the permutation parity of the cube as a bool
+    /// Return the permutation parity of the cube as a bool. Returns true if there is parity, and
+    /// false if there is no parity.
     pub fn perm_parity(&self) -> bool {
         self.ep_parity() ^ self.cp_parity()
     }
