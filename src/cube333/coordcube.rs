@@ -204,7 +204,7 @@ mod tests {
         );
         twist.co[2] = CornerTwist::AntiClockwise;
         assert_eq!(
-            twist.to_coord(),
+            TryInto::<CoordCube>::try_into(twist.clone()),
             Err(CubieToCoordError {
                 eo: EdgeFlip::Oriented,
                 co: CornerTwist::Clockwise,
@@ -237,6 +237,10 @@ mod tests {
                 co: CornerTwist::Oriented,
                 perm: true,
             })
+        );
+        assert_eq!(
+            swap.to_coord().unwrap_err().to_string(),
+            "a cube was in an illegal state"
         );
         swap.cp[0] = Corner::UBR;
         swap.cp[3] = Corner::UFR;
