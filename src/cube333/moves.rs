@@ -31,7 +31,7 @@ impl crate::moves::Move for Move333 {
     fn inverse(self) -> Self {
         Self {
             ty: self.ty,
-            count: (4 - self.count).rem_euclid(4),
+            count: 4u8.wrapping_sub(self.count).rem_euclid(4),
         }
     }
 
