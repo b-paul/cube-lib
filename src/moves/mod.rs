@@ -92,13 +92,13 @@ impl<M: Move> MoveSequence<M> {
                     Cancellation::NoMove => {
                         cancellation.remove(i);
                         cancelled = true;
-                    },
+                    }
                     Cancellation::OneMove(_) => {
                         let new = cancellation.remove(i);
                         cancellation.push(new);
                         cancelled = true;
-                    },
-                    Cancellation::TwoMove(_, _) => {},
+                    }
+                    Cancellation::TwoMove(_, _) => {}
                 }
 
                 if !next_mv.commutes_with(&cancellation[i]) {
