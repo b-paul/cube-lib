@@ -3,6 +3,7 @@
 
 #![deny(missing_docs)]
 
+pub mod coord;
 pub mod cube333;
 pub mod error;
 pub mod moves;

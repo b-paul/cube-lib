@@ -55,6 +55,21 @@ impl Edge {
         E::BL,
         E::BR,
     ];
+
+    /// Determines whether this edge sits on the E slice.
+    pub fn e_slice(&self) -> bool {
+        matches!(self, E::FR | E::FL | E::BL | E::BR)
+    }
+
+    /// Determines whether this edge sits on the M slice.
+    pub fn m_slice(&self) -> bool {
+        matches!(self, E::UF | E::UB | E::DF | E::DB)
+    }
+
+    /// Determines whether this edge sits on the S slice.
+    pub fn s_slice(&self) -> bool {
+        matches!(self, E::UL | E::UR | E::DL | E::DR)
+    }
 }
 
 impl From<Edge> for u8 {
