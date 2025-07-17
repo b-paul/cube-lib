@@ -63,8 +63,14 @@ pub trait Move: Eq + Clone {
 }
 
 /// A sequence of moves (also known as an algorithm) for some specific type of move.
-#[derive(Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct MoveSequence<M: Move>(pub Vec<M>);
+
+impl<M: Move + std::fmt::Debug> std::fmt::Debug for MoveSequence<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("MoveSequence").field(&self.0).finish()
+    }
+}
 
 impl<M: Move> MoveSequence<M> {
     /// Invert a sequence of moves.
@@ -92,11 +98,13 @@ impl<M: Move> MoveSequence<M> {
                     Cancellation::NoMove => {
                         cancellation.remove(i);
                         cancelled = true;
+                        continue;
                     }
-                    Cancellation::OneMove(_) => {
-                        let new = cancellation.remove(i);
-                        cancellation.push(new);
+                    Cancellation::OneMove(m) => {
+                        cancellation.remove(i);
+                        cancellation.push(m);
                         cancelled = true;
+                        continue;
                     }
                     Cancellation::TwoMove(_, _) => {}
                 }
@@ -112,5 +120,15 @@ impl<M: Move> MoveSequence<M> {
         }
 
         Self(cancellation)
+    }
+
+    /// The length of this sequence.
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Determines if this sequence is the empty sequence.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }

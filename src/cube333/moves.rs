@@ -1,9 +1,13 @@
 use super::CubieCube;
-use crate::moves::Cancellation;
+use crate::moves::{Cancellation, MoveSequence};
+
+#[cfg(test)]
+use proptest_derive::Arbitrary;
 
 /// Represents each type of move. Note that the `Move` struct uses this variable along with a
 /// counter to represents move such as R2 or U'.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub enum Move333Type {
     /// Right
     R,
@@ -21,9 +25,11 @@ pub enum Move333Type {
 
 /// Stores a move type and counter. An anti-clockwise move will have a count of 3.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(test, derive(Arbitrary))]
 #[allow(missing_docs)]
 pub struct Move333 {
     pub ty: Move333Type,
+    #[cfg_attr(test, proptest(strategy = "1..=3u8"))]
     pub count: u8,
 }
 
@@ -175,6 +181,16 @@ const EP_OFFSETS: [[usize; 12]; 6] = [
 ];
 
 impl CubieCube {
+    // This should really not be borrowing...
+    /// Copy the cube and apply an algorithm to it.
+    pub fn make_moves(&self, mvs: MoveSequence<Move333>) -> CubieCube {
+        let mut r = self.clone();
+        for mv in mvs.0 {
+            r = r.make_move(mv);
+        }
+        r
+    }
+
     // This function doesn't really need to be fast since coordinates exist
     /// Copy the cube, apply a move to it, then return the new cube.
     pub fn make_move(&self, mv: Move333) -> CubieCube {
@@ -223,6 +239,7 @@ impl CubieCube {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn r_loop() {
         let mut cube = CubieCube::SOLVED;
@@ -233,5 +250,22 @@ mod tests {
             });
         }
         assert_eq!(cube, CubieCube::SOLVED);
+    }
+
+    use proptest::collection::vec;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn cancel_same_moves(mvs in vec(any::<Move333>(), 0..20).prop_map(|v| MoveSequence(v))) {
+            let cancelled = mvs.clone().cancel();
+            assert!(cancelled.len() <= mvs.len());
+            assert_eq!(CubieCube::SOLVED.make_moves(mvs), CubieCube::SOLVED.make_moves(cancelled));
+        }
+
+        #[test]
+        fn invert_identity(mvs in vec(any::<Move333>(), 0..20).prop_map(|v| MoveSequence(v))) {
+            assert_eq!(CubieCube::SOLVED.make_moves(mvs.clone()).make_moves(mvs.inverse()), CubieCube::SOLVED);
+        }
     }
 }
