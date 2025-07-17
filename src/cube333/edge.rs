@@ -1,5 +1,5 @@
 use super::{Face, StickerToPieceError};
-use crate::TryFromIntToEnumError;
+use crate::error::TryFromIntToEnumError;
 
 /// An enum for every edge piece location.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]

@@ -1,7 +1,7 @@
 // Cube333 module
 //! Module for the 3x3x3 Rubik's cube (the one everyone knows).
 
-use crate::TryFromIntToEnumError;
+use crate::error::TryFromIntToEnumError;
 use thiserror::Error;
 
 /// Implementation of a cube based on coordinates, which are more performant than arrays when
