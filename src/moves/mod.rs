@@ -131,4 +131,11 @@ impl<M: Move> MoveSequence<M> {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+
+    /// Add another sequence of moves to the end of this one.
+    pub fn append(self, mut other: Self) -> Self {
+        let mut seq = self.0;
+        seq.append(&mut other.0);
+        MoveSequence(seq)
+    }
 }
