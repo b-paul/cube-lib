@@ -14,6 +14,8 @@ pub mod edge;
 /// Defines move types and implements application of moves to the CubieCube.
 pub mod moves;
 
+pub mod two_phase_solver;
+
 mod cubiecube;
 
 use corner::{Corner, CornerPos, CornerTwist};
