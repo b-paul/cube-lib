@@ -260,6 +260,7 @@ mod tests {
         fn cancel_same_moves(mvs in vec(any::<Move333>(), 0..20).prop_map(|v| MoveSequence(v))) {
             let cancelled = mvs.clone().cancel();
             assert!(cancelled.len() <= mvs.len());
+            assert!(cancelled.clone().append(cancelled.clone().inverse()).cancel().is_empty());
             assert_eq!(CubieCube::SOLVED.make_moves(mvs), CubieCube::SOLVED.make_moves(cancelled));
         }
 
