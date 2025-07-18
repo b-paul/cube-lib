@@ -1,13 +1,77 @@
 use super::{Corner, CornerTwist, CubieCube, Edge, EdgeFlip};
+use crate::coord::Coordinate;
 
+/// A coordinate representation of the corner orientation of a cube with respect to the U/F faces.
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
-struct COCoord(u16);
+pub struct COCoord(u16);
+/// A coordinate representation of the corner permutation of a cube with respect to the U/F faces.
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
-struct CPCoord(u16);
+pub struct CPCoord(u16);
+/// A coordinate representation of the edge orientation of a cube with respect to the U/F faces.
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
-struct EOCoord(u16);
+pub struct EOCoord(u16);
+/// A coordinate representation of the edge permutation of a cube with respect to the U/F faces.
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
-struct EPCoord(u32);
+pub struct EPCoord(u32);
+
+impl Coordinate<CubieCube> for COCoord {
+    fn from_puzzle(puzzle: &CubieCube) -> Self {
+        COCoord(to_o_coord::<8, 3>(&puzzle.co.map(|n| n.into())))
+    }
+
+    fn count() -> usize {
+        // 3^7
+        2187
+    }
+
+    fn repr(self) -> usize {
+        self.0 as usize
+    }
+}
+
+impl Coordinate<CubieCube> for CPCoord {
+    fn from_puzzle(puzzle: &CubieCube) -> Self {
+        CPCoord(to_p_coord::<8>(&puzzle.cp.map(|n| n.into())) as u16)
+    }
+
+    fn count() -> usize {
+        40320
+    }
+
+    fn repr(self) -> usize {
+        self.0 as usize
+    }
+}
+
+impl Coordinate<CubieCube> for EOCoord {
+    fn from_puzzle(puzzle: &CubieCube) -> Self {
+        EOCoord(to_o_coord::<12, 2>(&puzzle.eo.map(|n| n.into())))
+    }
+
+    fn count() -> usize {
+        // 2^11
+        2048
+    }
+
+    fn repr(self) -> usize {
+        self.0 as usize
+    }
+}
+
+impl Coordinate<CubieCube> for EPCoord {
+    fn from_puzzle(puzzle: &CubieCube) -> Self {
+        EPCoord(to_p_coord::<12>(&puzzle.ep.map(|n| n.into())))
+    }
+
+    fn count() -> usize {
+        // a lot
+        479001600
+    }
+
+    fn repr(self) -> usize {
+        self.0 as usize
+    }
+}
 
 /// Implementation of a coord cube, representing pieces using coordinates, which are values which
 /// are isomorphic to arrays represented in a cubie cube.
@@ -146,10 +210,10 @@ impl CubieCube {
             });
         }
 
-        let co = COCoord(to_o_coord::<8, 3>(&self.co.map(|n| n.into())));
-        let cp = CPCoord(to_p_coord::<8>(&self.cp.map(|n| n.into())) as u16);
-        let eo = EOCoord(to_o_coord::<12, 2>(&self.eo.map(|n| n.into())));
-        let ep = EPCoord(to_p_coord::<12>(&self.ep.map(|n| n.into())));
+        let co = COCoord::from_puzzle(self);
+        let cp = CPCoord::from_puzzle(self);
+        let eo = EOCoord::from_puzzle(self);
+        let ep = EPCoord::from_puzzle(self);
 
         Ok(CoordCube { co, cp, eo, ep })
     }
@@ -158,9 +222,9 @@ impl CubieCube {
 #[cfg(test)]
 mod tests {
     use crate::cube333::{
+        Corner, CornerTwist, CubieCube, Edge, EdgeFlip, StickerCube,
         coordcube::{CoordCube, CubieToCoordError},
         moves::{Move333, Move333Type},
-        Corner, CornerTwist, CubieCube, Edge, EdgeFlip, StickerCube,
     };
     use crate::mv;
 

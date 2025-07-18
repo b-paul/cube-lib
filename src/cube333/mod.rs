@@ -419,8 +419,8 @@ impl std::fmt::Display for StickerCube {
 mod tests {
     #[test]
     fn pieces_on_solved_cube() {
-        use super::edge::EdgePos::*;
         use super::StickerCube;
+        use super::edge::EdgePos::*;
         assert_eq!(StickerCube::SOLVED.edge_at(UB).unwrap(), UB, "UB");
         assert_eq!(StickerCube::SOLVED.edge_at(UR).unwrap(), UR, "UR");
         assert_eq!(StickerCube::SOLVED.edge_at(UF).unwrap(), UF, "UF");
