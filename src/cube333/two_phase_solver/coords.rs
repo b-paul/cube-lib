@@ -2,62 +2,14 @@
 //! of these solver.
 
 use crate::coord::Coordinate;
-use crate::cube333::CubieCube;
+use crate::cube333::{
+    CubieCube,
+    coordcube::{COCoord, EOCoord},
+};
 
-// TODO Copy pasted from the old coordcube file that i'll probably delete, should clean up
-fn to_o_coord<const COUNT: usize, const STATES: u16>(arr: &[u8; COUNT]) -> u16 {
-    arr.iter()
-        .skip(1)
-        .fold(0, |acc, &i| (acc * STATES) + i as u16)
-}
-
-/*
-// TODO this is kinda unreadable lol
-fn to_p_coord<const COUNT: usize>(arr: &[u8; COUNT]) -> u32 {
-    (1..COUNT).rev().fold(0, |acc, idx| {
-        (acc * (idx + 1) as u32) + arr[0..idx].iter().filter(|&&x| x > arr[idx]).count() as u32
-    })
-}
-*/
-
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
-struct COCoord(u16);
-
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
-struct EOCoord(u16);
-
+/// Coordinate for positions of E slice edges (ignoring what the edges actually arge)
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
 struct ESliceEdgeCoord(u16);
-
-impl Coordinate<CubieCube> for COCoord {
-    fn from_puzzle(puzzle: &CubieCube) -> Self {
-        COCoord(to_o_coord::<8, 3>(&puzzle.co.map(|n| n.into())))
-    }
-
-    fn count() -> usize {
-        // 3^7
-        2187
-    }
-
-    fn repr(self) -> usize {
-        self.0 as usize
-    }
-}
-
-impl Coordinate<CubieCube> for EOCoord {
-    fn from_puzzle(puzzle: &CubieCube) -> Self {
-        EOCoord(to_o_coord::<12, 2>(&puzzle.eo.map(|n| n.into())))
-    }
-
-    fn count() -> usize {
-        // 2^11
-        2048
-    }
-
-    fn repr(self) -> usize {
-        self.0 as usize
-    }
-}
 
 impl Coordinate<CubieCube> for ESliceEdgeCoord {
     fn from_puzzle(puzzle: &CubieCube) -> Self {
@@ -107,12 +59,22 @@ impl Coordinate<CubieCube> for ESliceEdgeCoord {
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
-// temp
-#[allow(dead_code)]
-struct Phase1Cube {
+pub struct Phase1Cube {
     co: COCoord,
     eo: EOCoord,
     e_slice: ESliceEdgeCoord,
+}
+
+impl Phase1Cube {
+    /// Convert a cubie cube into a phase 1 state cube. This will never fail as every cube can be
+    /// put into the phase 1 solver.
+    pub fn from_puzzle(puzzle: &CubieCube) -> Self {
+        Phase1Cube {
+            co: COCoord::from_puzzle(puzzle),
+            eo: EOCoord::from_puzzle(puzzle),
+            e_slice: ESliceEdgeCoord::from_puzzle(puzzle),
+        }
+    }
 }
 
 #[cfg(test)]

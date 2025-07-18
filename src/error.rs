@@ -9,4 +9,3 @@ pub enum TryFromIntToEnumError {
     #[error("attempted to convert integer into enum value, but integer was out of bounds")]
     OutOfBounds,
 }
-
