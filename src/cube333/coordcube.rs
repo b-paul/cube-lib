@@ -2,16 +2,19 @@ use super::{Corner, CornerTwist, CubieCube, Edge, EdgeFlip};
 use crate::coord::Coordinate;
 
 /// A coordinate representation of the corner orientation of a cube with respect to the U/F faces.
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
 pub struct COCoord(u16);
+
 /// A coordinate representation of the corner permutation of a cube with respect to the U/F faces.
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
 pub struct CPCoord(u16);
+
 /// A coordinate representation of the edge orientation of a cube with respect to the U/F faces.
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
 pub struct EOCoord(u16);
+
 /// A coordinate representation of the edge permutation of a cube with respect to the U/F faces.
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
 pub struct EPCoord(u32);
 
 impl Coordinate<CubieCube> for COCoord {

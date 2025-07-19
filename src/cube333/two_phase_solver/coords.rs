@@ -4,12 +4,32 @@
 use crate::coord::Coordinate;
 use crate::cube333::{
     CubieCube,
-    coordcube::{COCoord, EOCoord},
+    coordcube::{COCoord, CPCoord, EOCoord},
 };
+
+// TODO this is kinda unreadable lol
+// this is copied from coordcube.rs then modified hmmm maybe copy pasting isn't ideal
+fn to_p_coord<const COUNT: usize, const LOWER: usize, const UPPER: usize>(
+    arr: &[u8; COUNT],
+) -> u16 {
+    (LOWER..UPPER).rev().fold(0, |acc, idx| {
+        (acc * (idx + 1) as u16) + arr[0..idx].iter().filter(|&&x| x > arr[idx]).count() as u16
+    })
+}
 
 /// Coordinate for positions of E slice edges (ignoring what the edges actually arge)
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
 struct ESliceEdgeCoord(u16);
+
+/// Coordinate for positions of U/D layer edges, assuming the cube is in and says in domino
+/// reduction.
+#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
+struct DominoEPCoord(u16);
+
+/// Coordinate for positions of the E slice edges, assuming the cube is in and says in domino
+/// reduction.
+#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
+struct DominoESliceCoord(u16);
 
 impl Coordinate<CubieCube> for ESliceEdgeCoord {
     fn from_puzzle(puzzle: &CubieCube) -> Self {
@@ -58,6 +78,34 @@ impl Coordinate<CubieCube> for ESliceEdgeCoord {
     }
 }
 
+impl Coordinate<CubieCube> for DominoEPCoord {
+    fn from_puzzle(puzzle: &CubieCube) -> Self {
+        DominoEPCoord(to_p_coord::<12, 0, 8>(&puzzle.ep.map(|n| n.into())))
+    }
+
+    fn count() -> usize {
+        40320
+    }
+
+    fn repr(self) -> usize {
+        self.0 as usize
+    }
+}
+
+impl Coordinate<CubieCube> for DominoESliceCoord {
+    fn from_puzzle(puzzle: &CubieCube) -> Self {
+        DominoESliceCoord(to_p_coord::<12, 8, 12>(&puzzle.ep.map(|n| n.into())))
+    }
+
+    fn count() -> usize {
+        24
+    }
+
+    fn repr(self) -> usize {
+        self.0 as usize
+    }
+}
+
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
 pub struct Phase1Cube {
     co: COCoord,
@@ -74,6 +122,29 @@ impl Phase1Cube {
             eo: EOCoord::from_puzzle(puzzle),
             e_slice: ESliceEdgeCoord::from_puzzle(puzzle),
         }
+    }
+}
+
+pub struct Phase2Cube {
+    cp: CPCoord,
+    ep: DominoEPCoord,
+    e_slice: DominoESliceCoord,
+}
+
+fn cubie_in_domino(puzzle: &CubieCube) -> bool {
+    let p1 = Phase1Cube::from_puzzle(puzzle);
+    p1.co.repr() == 0 && p1.eo.repr() == 0 && p1.e_slice.repr() == 0
+}
+
+impl Phase2Cube {
+    /// Attempt to convert a cubie cube into a Phase2Cube. This will fail if the cube is not in U/D
+    /// domino reduction.
+    pub fn from_puzzle(puzzle: &CubieCube) -> Option<Self> {
+        cubie_in_domino(puzzle).then_some(Phase2Cube {
+            cp: CPCoord::from_puzzle(puzzle),
+            ep: DominoEPCoord::from_puzzle(puzzle),
+            e_slice: DominoESliceCoord::from_puzzle(puzzle),
+        })
     }
 }
 
