@@ -4,19 +4,20 @@ use crate::error::TryFromIntToEnumError;
 /// An enum for every edge piece location.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[allow(missing_docs)]
+#[repr(u8)]
 pub enum Edge {
-    UF,
-    UL,
-    UB,
-    UR,
-    DF,
-    DL,
-    DB,
-    DR,
-    FR,
-    FL,
-    BL,
-    BR,
+    UF = 0,
+    UL = 1,
+    UB = 2,
+    UR = 3,
+    DF = 4,
+    DL = 5,
+    DB = 6,
+    DR = 7,
+    FR = 8,
+    FL = 9,
+    BL = 10,
+    BR = 11,
 }
 
 use Edge as E;
@@ -74,20 +75,7 @@ impl Edge {
 
 impl From<Edge> for u8 {
     fn from(value: Edge) -> Self {
-        match value {
-            E::UF => 0,
-            E::UL => 1,
-            E::UB => 2,
-            E::UR => 3,
-            E::DF => 4,
-            E::DL => 5,
-            E::DB => 6,
-            E::DR => 7,
-            E::FR => 8,
-            E::FL => 9,
-            E::BL => 10,
-            E::BR => 11,
-        }
+        value as u8
     }
 }
 
@@ -116,19 +104,17 @@ impl TryFrom<u8> for Edge {
 /// An enum to tell if an edge is flipped or not.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[allow(missing_docs)]
+#[repr(u8)]
 pub enum EdgeFlip {
-    Oriented,
-    Flipped,
+    Oriented = 0,
+    Flipped = 1,
 }
 
 use EdgeFlip as EF;
 
 impl From<EdgeFlip> for u8 {
     fn from(value: EdgeFlip) -> Self {
-        match value {
-            EF::Oriented => 0,
-            EF::Flipped => 1,
-        }
+        value as u8
     }
 }
 
