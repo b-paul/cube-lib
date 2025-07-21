@@ -50,8 +50,7 @@ impl crate::moves::Move for Move333 {
         }
     }
 
-    fn cancel(self, b: Self) -> Cancellation<Self>
-    {
+    fn cancel(self, b: Self) -> Cancellation<Self> {
         if self.ty == b.ty {
             let count = (self.count + b.count) % 4;
             if count == 0 {
@@ -153,7 +152,7 @@ const CO_OFFSETS: [[u8; 8]; 6] = [
     [1, 2, 0, 0, 2, 1, 0, 0],
     [0, 0, 1, 2, 0, 0, 2, 1],
 ];
-const CP_OFFSETS: [[usize; 8]; 6] = [
+const CP_OFFSETS: [[u8; 8]; 6] = [
     [4, 1, 2, 0, 7, 5, 6, 3],
     [0, 2, 6, 3, 4, 1, 5, 7],
     [3, 0, 1, 2, 4, 5, 6, 7],
@@ -169,7 +168,7 @@ const EO_OFFSETS: [[u8; 12]; 6] = [
     [1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0],
     [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1],
 ];
-const EP_OFFSETS: [[usize; 12]; 6] = [
+const EP_OFFSETS: [[u8; 12]; 6] = [
     [0, 1, 2, 8, 4, 5, 6, 11, 7, 9, 10, 3],
     [0, 10, 2, 3, 4, 9, 6, 7, 8, 1, 5, 11],
     [3, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11],
@@ -179,27 +178,18 @@ const EP_OFFSETS: [[usize; 12]; 6] = [
 ];
 
 impl CubieCube {
-    // This should really not be borrowing...
     /// Copy the cube and apply an algorithm to it.
-    pub fn make_moves(&self, mvs: MoveSequence<Move333>) -> CubieCube {
-        let mut r = self.clone();
-        for mv in mvs.0 {
-            r = r.make_move(mv);
-        }
-        r
+    pub fn make_moves(self, mvs: MoveSequence<Move333>) -> CubieCube {
+        mvs.0.into_iter().fold(self, |c, m| c.make_move(m))
     }
 
     // This function doesn't really need to be fast since coordinates exist
     /// Copy the cube, apply a move to it, then return the new cube.
-    pub fn make_move(&self, mv: Move333) -> CubieCube {
-        let mut r = self.clone();
-        for _ in 0..mv.count {
-            r = r.make_move_type(mv.ty);
-        }
-        r
+    pub fn make_move(self, mv: Move333) -> CubieCube {
+        (0..mv.count).fold(self, |c, _| c.make_move_type(mv.ty))
     }
 
-    fn make_move_type(&self, mv: Move333Type) -> CubieCube {
+    fn make_move_type(self, mv: Move333Type) -> CubieCube {
         let co_offsets = CO_OFFSETS[mv as usize];
         let cp_offsets = CP_OFFSETS[mv as usize];
         let eo_offsets = EO_OFFSETS[mv as usize];
@@ -216,13 +206,13 @@ impl CubieCube {
         let mut ep = [0; 12];
 
         for i in 0..8 {
-            co[i] = (selfco[cp_offsets[i]] + co_offsets[i]) % 3;
-            cp[i] = selfcp[cp_offsets[i]];
+            co[i] = (selfco[cp_offsets[i] as usize] + co_offsets[i]) % 3;
+            cp[i] = selfcp[cp_offsets[i] as usize];
         }
 
         for i in 0..12 {
-            eo[i] = (selfeo[ep_offsets[i]] + eo_offsets[i]) % 2;
-            ep[i] = selfep[ep_offsets[i]];
+            eo[i] = (selfeo[ep_offsets[i] as usize] + eo_offsets[i]) % 2;
+            ep[i] = selfep[ep_offsets[i] as usize];
         }
 
         let co = co.map(|n| n.try_into().unwrap());

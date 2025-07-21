@@ -18,7 +18,10 @@ use proptest_derive::Arbitrary;
 // TODO This may be generalised later, but for now it'll be specialised to just `CubieCube`
 
 /// A type that encodes a subset of the set of 3x3 moves, e.g. DR moves.
-pub trait SubMove: Move {
+pub trait SubMove: Move + Copy
+where
+    Self: 'static,
+{
     /// Interpret a move as a normal move to be applied to a `CubieCube`.
     fn into_move(self) -> Move333;
 
@@ -27,7 +30,7 @@ pub trait SubMove: Move {
 
     /// The list of all moves that this type encodes. The length of the returned vector should be
     /// `count()`.
-    fn moves() -> Vec<Self>;
+    const MOVE_LIST: &'static [Self];
 
     /// Get the index of this move in the move list.
     fn index(self) -> usize;
@@ -55,8 +58,8 @@ impl<M: SubMove, C: Coordinate<CubieCube>> MoveTable<M, C> {
 
         while let Some(cur_cube) = stack.pop() {
             let c = C::from_puzzle(&cur_cube);
-            for mv in M::moves() {
-                let next = cur_cube.make_move(mv.clone().into_move());
+            for mv in M::MOVE_LIST {
+                let next = cur_cube.clone().make_move(mv.into_move());
                 let c2 = C::from_puzzle(&next);
 
                 table[mv.index()][c.repr()] = c2;
@@ -87,6 +90,7 @@ impl<M: SubMove, C: Coordinate<CubieCube>> MoveTable<M, C> {
     }
 }
 
+use crate::cube333::moves::MoveGenerator;
 impl SubMove for Move333 {
     fn into_move(self) -> Move333 {
         self
@@ -96,10 +100,7 @@ impl SubMove for Move333 {
         18
     }
 
-    fn moves() -> Vec<Self> {
-        use crate::cube333::moves::MoveGenerator;
-        crate::cube333::moves::Htm::MOVE_LIST.to_vec()
-    }
+    const MOVE_LIST: &'static [Move333] = crate::cube333::moves::Htm::MOVE_LIST;
 
     fn index(self) -> usize {
         self.into()
@@ -179,21 +180,18 @@ impl SubMove for DrMove {
         10
     }
 
-    fn moves() -> Vec<Self> {
-        use DrMove as M;
-        vec![
-            M::R2,
-            M::L2,
-            M::F2,
-            M::B2,
-            M::U(1),
-            M::U(2),
-            M::U(3),
-            M::D(1),
-            M::D(2),
-            M::D(3),
-        ]
-    }
+    const MOVE_LIST: &'static [DrMove] = &[
+        DrMove::R2,
+        DrMove::L2,
+        DrMove::F2,
+        DrMove::B2,
+        DrMove::U(1),
+        DrMove::U(2),
+        DrMove::U(3),
+        DrMove::D(1),
+        DrMove::D(2),
+        DrMove::D(3),
+    ];
 
     fn index(self) -> usize {
         match self {
