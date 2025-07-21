@@ -2,7 +2,7 @@
 //! of a puzzle.
 
 /// A coordinate type, encoding cosets of the puzzle P.
-pub trait Coordinate<P>: Copy + Default {
+pub trait Coordinate<P>: Copy + Default + Eq {
     /// Obtain the coordinate that corresponds to the given puzzle.
     fn from_puzzle(puzzle: &P) -> Self;
 

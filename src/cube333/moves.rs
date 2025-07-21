@@ -99,7 +99,7 @@ impl From<Move333> for usize {
 macro_rules! mv {
     ($ty:ident, $count: expr) => {
         Move333 {
-            ty: crate::cube333::moves::Move333Type::$ty,
+            ty: Move333Type::$ty,
             count: $count,
         }
     };

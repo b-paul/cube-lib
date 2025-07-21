@@ -12,8 +12,12 @@ use crate::cube333::{
 fn to_p_coord<const COUNT: usize, const LOWER: usize, const UPPER: usize>(
     arr: &[u8; COUNT],
 ) -> u16 {
-    (LOWER..UPPER).rev().fold(0, |acc, idx| {
-        (acc * (idx + 1) as u16) + arr[0..idx].iter().filter(|&&x| x > arr[idx]).count() as u16
+    (0..UPPER - LOWER).rev().fold(0, |acc, idx| {
+        (acc * (idx + 1) as u16)
+            + arr[LOWER..LOWER + idx]
+                .iter()
+                .filter(|&&x| x > arr[LOWER + idx])
+                .count() as u16
     })
 }
 
@@ -47,13 +51,13 @@ impl Coordinate<CubieCube> for ESliceEdgeCoord {
                 k += 1;
                 if k == 1 {
                     // if k was previously zero, c was 0, so just set c to be the next n value
-                    c = n + 1;
+                    c = 1;
                 } else {
                     // Otherwise, c was previously equal to n choose k-1, and we want to update it
                     // to be n+1 choose k. To do this we can use the identity
                     // n choose k = (n/k) * (n-1 choose k-1)
                     // we have to divide at the end do dodge floor division
-                    debug_assert!((c * n) % (k - 1) == 0);
+                    debug_assert!((c * (n+1)) % (k - 1) == 0);
                     c = c * (n + 1) / (k - 1);
                 }
             } else if k > 0 {
@@ -61,8 +65,8 @@ impl Coordinate<CubieCube> for ESliceEdgeCoord {
                 // In this case we want to update n choose k-1 to be n+1 choose k-1. To do this we
                 // can use the identity
                 // (n choose k) = (n/(n-k)) (n-1 choose k)
-                debug_assert!((c * n) % (n - k + 1) == 0);
-                c = c * (n + 1) / (n - k + 1);
+                debug_assert!((c * (n+1)) % (n+1 - k+1) == 0);
+                c = c * (n + 1) / (n+1 - k+1);
             }
         }
 
@@ -172,5 +176,6 @@ mod test {
             coords.insert(coord);
         }
         assert!(coords.len() == ESliceEdgeCoord::count());
+        assert!(coords.iter().all(|c| c.repr() < ESliceEdgeCoord::count()));
     }
 }
