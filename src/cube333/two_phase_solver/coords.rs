@@ -19,17 +19,17 @@ fn to_p_coord<const COUNT: usize, const LOWER: usize, const UPPER: usize>(
 
 /// Coordinate for positions of E slice edges (ignoring what the edges actually arge)
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
-struct ESliceEdgeCoord(u16);
+pub struct ESliceEdgeCoord(u16);
 
 /// Coordinate for positions of U/D layer edges, assuming the cube is in and says in domino
 /// reduction.
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
-struct DominoEPCoord(u16);
+pub struct DominoEPCoord(u16);
 
 /// Coordinate for positions of the E slice edges, assuming the cube is in and says in domino
 /// reduction.
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
-struct DominoESliceCoord(u16);
+pub struct DominoESliceCoord(u16);
 
 impl Coordinate<CubieCube> for ESliceEdgeCoord {
     fn from_puzzle(puzzle: &CubieCube) -> Self {

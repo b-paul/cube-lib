@@ -51,8 +51,6 @@ impl crate::moves::Move for Move333 {
     }
 
     fn cancel(self, b: Self) -> Cancellation<Self>
-    where
-        Self: Sized,
     {
         if self.ty == b.ty {
             let count = (self.count + b.count) % 4;
@@ -101,7 +99,7 @@ impl From<Move333> for usize {
 macro_rules! mv {
     ($ty:ident, $count: expr) => {
         Move333 {
-            ty: Move333Type::$ty,
+            ty: crate::cube333::moves::Move333Type::$ty,
             count: $count,
         }
     };

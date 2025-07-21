@@ -26,12 +26,10 @@ pub enum Cancellation<M: Move> {
 /// are encoded in the `commutes_with` method and order relations are encoded in the `cancel`
 /// method. These relations are all that are assumed for the general `MoveSequence::cancel`, so any
 /// additional relations will not be used for optimal cancellation.
-pub trait Move: Eq + Clone {
+pub trait Move: Eq + Clone + Sized {
     /// Take the inverse of a move. These inverses must satisfy the invertibility conditions of
     /// a group, i.e. that `X X^{-1} = X^{-1} X = e` where `e` is the empty sequence.
-    fn inverse(self) -> Self
-    where
-        Self: Sized;
+    fn inverse(self) -> Self;
 
     /// Returns whether the two moves commute, i.e. can be swapped when adjacent. It is required
     /// that this property is transitive.
@@ -57,9 +55,7 @@ pub trait Move: Eq + Clone {
     /// assert!(mv!(R, 1).cancel(mv!(R, 3)) == Cancellation::NoMove);
     /// # }
     /// ```
-    fn cancel(self, b: Self) -> Cancellation<Self>
-    where
-        Self: Sized;
+    fn cancel(self, b: Self) -> Cancellation<Self>;
 }
 
 /// A sequence of moves (also known as an algorithm) for some specific type of move.
