@@ -178,18 +178,19 @@ const EP_OFFSETS: [[u8; 12]; 6] = [
 ];
 
 impl CubieCube {
-    /// Copy the cube and apply an algorithm to it.
+    /// Apply an algorithm to a cube
     pub fn make_moves(self, mvs: MoveSequence<Move333>) -> CubieCube {
         mvs.0.into_iter().fold(self, |c, m| c.make_move(m))
     }
 
     // This function doesn't really need to be fast since coordinates exist
-    /// Copy the cube, apply a move to it, then return the new cube.
+    /// Apply a move to a cube.
     pub fn make_move(self, mv: Move333) -> CubieCube {
         (0..mv.count).fold(self, |c, _| c.make_move_type(mv.ty))
     }
 
-    fn make_move_type(self, mv: Move333Type) -> CubieCube {
+    /// Make a single application of a move
+    pub fn make_move_type(self, mv: Move333Type) -> CubieCube {
         let co_offsets = CO_OFFSETS[mv as usize];
         let cp_offsets = CP_OFFSETS[mv as usize];
         let eo_offsets = EO_OFFSETS[mv as usize];

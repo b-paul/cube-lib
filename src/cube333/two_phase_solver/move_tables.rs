@@ -32,6 +32,14 @@ where
     /// `count()`.
     const MOVE_LIST: &'static [Self];
 
+    /// Returns all of the states that come from applying each move to the given puzzle, along with
+    /// the given move.
+    fn successor_states(puzzle: CubieCube) -> impl Iterator<Item = (Self, CubieCube)> {
+        Self::MOVE_LIST
+            .iter()
+            .map(move |m| (*m, puzzle.clone().make_move(m.into_move())))
+    }
+
     /// Get the index of this move in the move list.
     fn index(self) -> usize;
 }
@@ -58,8 +66,7 @@ impl<M: SubMove, C: Coordinate<CubieCube>> MoveTable<M, C> {
 
         while let Some(cur_cube) = stack.pop() {
             let c = C::from_puzzle(&cur_cube);
-            for mv in M::MOVE_LIST {
-                let next = cur_cube.clone().make_move(mv.into_move());
+            for (mv, next) in M::successor_states(cur_cube) {
                 let c2 = C::from_puzzle(&next);
 
                 table[mv.index()][c.repr()] = c2;
