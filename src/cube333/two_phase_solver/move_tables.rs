@@ -80,13 +80,13 @@ impl<M: SubMove, C: Coordinate<CubieCube>> MoveTable<M, C> {
     }
 
     /// Determine what coordinate comes from applying a move.
-    pub fn apply(&self, coord: C, mv: M) -> C {
+    pub fn make_move(&self, coord: C, mv: M) -> C {
         self.table[mv.index()][coord.repr()]
     }
 
     /// Determine what coordinate comes from applying a sequence of moves.
-    fn apply_sequence(&self, coord: C, alg: MoveSequence<M>) -> C {
-        alg.0.into_iter().fold(coord, |c, m| self.apply(c, m))
+    fn make_moves(&self, coord: C, alg: MoveSequence<M>) -> C {
+        alg.0.into_iter().fold(coord, |c, m| self.make_move(c, m))
     }
 }
 
@@ -250,7 +250,7 @@ mod test {
         p: CubieCube,
         mvs: MoveSequence<M>,
     ) {
-        let l = table.apply_sequence(C::from_puzzle(&p), mvs.clone());
+        let l = table.make_moves(C::from_puzzle(&p), mvs.clone());
         let r = C::from_puzzle(&p.make_moves(MoveSequence(
             mvs.0.into_iter().map(|m| m.into_move()).collect(),
         )));
