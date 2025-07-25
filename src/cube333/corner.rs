@@ -128,6 +128,15 @@ impl CornerTwist {
             CT::AntiClockwise => self.anticlockwise(),
         }
     }
+
+    /// Calculate the inverse twist of a given twist.
+    pub fn inverse(self) -> CornerTwist {
+        match self {
+            CT::Oriented => CT::Oriented,
+            CT::Clockwise => CT::AntiClockwise,
+            CT::AntiClockwise => CT::Clockwise,
+        }
+    }
 }
 
 /// An enum to represent every corner sticker position.
