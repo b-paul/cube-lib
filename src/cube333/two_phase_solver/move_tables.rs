@@ -47,12 +47,12 @@ where
 /// A move table, which stores mappings of coordinate + move pairs to the coordinate that results
 /// from applying the move.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct MoveTable<M: SubMove, C: Coordinate<CubieCube>> {
-    table: Vec<Vec<C>>,
+pub struct MoveTable<M: SubMove, C: Coordinate<CubieCube>, const MOVES: usize> {
+    table: Box<[[C; MOVES]]>,
     _phantom: PhantomData<M>,
 }
 
-impl<M: SubMove, C: Coordinate<CubieCube>> MoveTable<M, C> {
+impl<M: SubMove, C: Coordinate<CubieCube>, const MOVES: usize> MoveTable<M, C, MOVES> {
     /// Generate a move table. This is slightly expensive, so making move tables repeatedly should
     /// be avoided, since the resulting move table generated will be identical anyways.
     pub fn generate() -> Self {
@@ -60,16 +60,15 @@ impl<M: SubMove, C: Coordinate<CubieCube>> MoveTable<M, C> {
         let mut stack = vec![CubieCube::SOLVED];
         visited[0] = true;
 
-        let mut table: Vec<Vec<C>> = (0..M::count())
-            .map(|_| vec![C::default(); C::count()])
-            .collect();
+        let mut table: Box<[[C; MOVES]]> =
+            vec![std::array::from_fn(|_| Default::default()); C::count()].into_boxed_slice();
 
         while let Some(cur_cube) = stack.pop() {
             let c = C::from_puzzle(&cur_cube);
             for (mv, next) in M::successor_states(cur_cube) {
                 let c2 = C::from_puzzle(&next);
 
-                table[mv.index()][c.repr()] = c2;
+                table[c.repr()][mv.index()] = c2;
 
                 if !visited[c2.repr()] {
                     visited[c2.repr()] = true;
@@ -88,7 +87,7 @@ impl<M: SubMove, C: Coordinate<CubieCube>> MoveTable<M, C> {
 
     /// Determine what coordinate comes from applying a move.
     pub fn make_move(&self, coord: C, mv: M) -> C {
-        self.table[mv.index()][coord.repr()]
+        self.table[coord.repr()][mv.index()]
     }
 
     /// Determine what coordinate comes from applying a sequence of moves.
@@ -214,12 +213,12 @@ impl SubMove for DrMove {
     }
 }
 
-type COMoveTable = MoveTable<Move333, COCoord>;
-type EOMoveTable = MoveTable<Move333, EOCoord>;
-type ESliceEdgeMoveTable = MoveTable<Move333, ESliceEdgeCoord>;
-type DominoCPMoveTable = MoveTable<DrMove, CPCoord>;
-type DominoEPMoveTable = MoveTable<DrMove, DominoEPCoord>;
-type DominoESliceMoveTable = MoveTable<DrMove, DominoESliceCoord>;
+type COMoveTable = MoveTable<Move333, COCoord, 18>;
+type EOMoveTable = MoveTable<Move333, EOCoord, 18>;
+type ESliceEdgeMoveTable = MoveTable<Move333, ESliceEdgeCoord, 18>;
+type DominoCPMoveTable = MoveTable<DrMove, CPCoord, 10>;
+type DominoEPMoveTable = MoveTable<DrMove, DominoEPCoord, 10>;
+type DominoESliceMoveTable = MoveTable<DrMove, DominoESliceCoord, 10>;
 
 #[cfg(test)]
 mod test {
@@ -252,8 +251,12 @@ mod test {
      * Move application should be compatable with coordinate translation.
      */
 
-    fn diagram_commutes<M: SubMove, C: Coordinate<CubieCube> + std::fmt::Debug>(
-        table: &MoveTable<M, C>,
+    fn diagram_commutes<
+        M: SubMove,
+        C: Coordinate<CubieCube> + std::fmt::Debug,
+        const MOVES: usize,
+    >(
+        table: &MoveTable<M, C, MOVES>,
         p: CubieCube,
         mvs: MoveSequence<M>,
     ) {
