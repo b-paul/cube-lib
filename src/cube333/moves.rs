@@ -223,6 +223,47 @@ impl CubieCube {
 
         CubieCube { co, cp, eo, ep }
     }
+
+    /// Multiply two cube states in the Rubik's cube group.
+    pub fn multiply_cube(self, other: CubieCube) -> CubieCube {
+        let mut result = CubieCube::SOLVED;
+
+        for i in 0..8 {
+            // this is kinda confusing but like try it on a cube
+            let oa = self.co[other.cp[i] as usize];
+            let ob = other.co[i];
+            let o = oa.twist_by(ob);
+            result.co[i] = o;
+            result.cp[i] = self.cp[other.cp[i] as usize];
+        }
+
+        for i in 0..12 {
+            let oa = self.eo[other.ep[i] as usize];
+            let ob = other.eo[i];
+            let o = oa.flip_by(ob);
+            result.eo[i] = o;
+            result.ep[i] = self.ep[other.ep[i] as usize];
+        }
+
+        result
+    }
+
+    /// Get the inverse in the Rubik's cube group.
+    pub fn inverse(self) -> CubieCube {
+        let mut result = CubieCube::SOLVED;
+
+        for i in 0..8 {
+            result.co[self.cp[i] as usize] = self.co[i].inverse();
+            result.cp[self.cp[i] as usize] = (i as u8).try_into().unwrap();
+        }
+
+        for i in 0..12 {
+            result.eo[self.ep[i] as usize] = self.eo[i];
+            result.ep[self.ep[i] as usize] = (i as u8).try_into().unwrap();
+        }
+
+        result
+    }
 }
 
 #[cfg(test)]
@@ -263,6 +304,13 @@ mod tests {
         fn cancel_idemotent(mvs in vec(any::<Move333>(), 0..20).prop_map(|v| MoveSequence(v))) {
             let cancelled = mvs.clone().cancel();
             assert_eq!(cancelled.clone().cancel(), cancelled);
+        }
+
+        #[test]
+        fn inverse_apply(mvs in vec(any::<Move333>(), 0..20).prop_map(|v| MoveSequence(v))) {
+            // TODO use real random state for this proptest! doing random moves is silly!
+            let fake_random_state = CubieCube::SOLVED.make_moves(mvs);
+            assert_eq!(CubieCube::SOLVED, fake_random_state.clone().multiply_cube(fake_random_state.clone().inverse()));
         }
     }
 }
