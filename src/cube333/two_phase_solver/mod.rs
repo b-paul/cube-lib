@@ -2,3 +2,4 @@
 
 mod coords;
 mod move_tables;
+mod symmetry;

@@ -311,6 +311,7 @@ mod tests {
             // TODO use real random state for this proptest! doing random moves is silly!
             let fake_random_state = CubieCube::SOLVED.make_moves(mvs);
             assert_eq!(CubieCube::SOLVED, fake_random_state.clone().multiply_cube(fake_random_state.clone().inverse()));
+            assert_eq!(CubieCube::SOLVED, fake_random_state.clone().inverse().multiply_cube(fake_random_state.clone()));
         }
     }
 }
