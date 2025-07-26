@@ -1,11 +1,12 @@
 //! This module contains the coordinate representations of cube states relevant to the two phases
 //! of these solver.
 
-use crate::coord::Coordinate;
+use crate::coord::{Coordinate, FromCoordinate};
 use crate::cube333::{
     CubieCube,
     coordcube::{COCoord, CPCoord, EOCoord},
 };
+use super::symmetry::DrSymmetry;
 
 // TODO this is kinda unreadable lol
 // this is copied from coordcube.rs then modified hmmm maybe copy pasting isn't ideal
@@ -80,6 +81,10 @@ impl Coordinate<CubieCube> for ESliceEdgeCoord {
     fn repr(self) -> usize {
         self.0 as usize
     }
+
+    fn from_repr(n: usize) -> Self {
+        ESliceEdgeCoord(n as u16)
+    }
 }
 
 impl Coordinate<CubieCube> for DominoEPCoord {
@@ -94,6 +99,10 @@ impl Coordinate<CubieCube> for DominoEPCoord {
     fn repr(self) -> usize {
         self.0 as usize
     }
+
+    fn from_repr(n: usize) -> Self {
+        DominoEPCoord(n as u16)
+    }
 }
 
 impl Coordinate<CubieCube> for DominoESliceCoord {
@@ -107,6 +116,77 @@ impl Coordinate<CubieCube> for DominoESliceCoord {
 
     fn repr(self) -> usize {
         self.0 as usize
+    }
+
+    fn from_repr(n: usize) -> Self {
+        DominoESliceCoord(n as u16)
+    }
+}
+
+/// A symmetry coordinate over `DrSymmetry`s. A SymCoordinate should include both what equivalence
+/// class the coordinate is in, along with the symmetry it has from the representant.
+pub trait DrSymCoordinate: Copy + Default + Eq {
+    type Raw: Coordinate<CubieCube>;
+
+    /// The number of possible coordinate states.
+    fn count() -> usize;
+
+    /// The number of equivalence classes this coordinate encodes modulo symmetry.
+    fn classes() -> usize;
+
+    /// A representation of this coordinate as a usize, for use, in table lookups.
+    fn repr(self) -> (usize, DrSymmetry);
+
+    /// Convert the representation of a coordinate to the coordinate itself. We assume 0 with the
+    /// identity symmetry corresponds to the solved state.
+    fn from_repr(idx: usize, sym: DrSymmetry) -> Self;
+}
+
+pub struct RawDrSymTable<S: DrSymCoordinate>
+where
+    CubieCube: FromCoordinate<S::Raw>,
+{
+    raw_to_sym: Box<[S]>,
+    sym_to_raw: Box<[S::Raw]>,
+}
+
+impl<S: DrSymCoordinate> RawDrSymTable<S>
+where
+    CubieCube: FromCoordinate<S::Raw>,
+{
+    pub fn generate() -> Self {
+        let mut raw_to_sym = vec![S::default(); S::Raw::count()].into_boxed_slice();
+        let mut sym_to_raw = vec![S::Raw::default(); S::count()].into_boxed_slice();
+
+        let mut sym_idx = 0;
+
+        for raw in (0..S::Raw::count()).map(S::Raw::from_repr) {
+            // Skip entries we have already initialised (note that states symmetric to the solved
+            // state will not have solved SymCoordinate since a SymCoordinate will include its
+            // symmetry)
+            if sym_to_raw[raw.repr()] != S::Raw::default() {
+                continue;
+            }
+
+            let mut c = CubieCube::SOLVED;
+            c.set_coord(raw);
+
+            // Then we go over every symmetry of this coordinate, and update the tables based on
+            // them.
+            for sym in DrSymmetry::ARRAY {
+                let d = c.clone().conjugate_dr_symmetry(sym);
+                let raw2 = S::Raw::from_puzzle(&d);
+                raw_to_sym[raw2.repr()] = S::from_repr(sym_idx, sym);
+            }
+
+            sym_to_raw[sym_idx] = raw;
+            sym_idx += 1;
+        }
+
+        RawDrSymTable {
+            raw_to_sym,
+            sym_to_raw,
+        }
     }
 }
 

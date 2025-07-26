@@ -30,6 +30,10 @@ impl Coordinate<CubieCube> for COCoord {
     fn repr(self) -> usize {
         self.0 as usize
     }
+
+    fn from_repr(n: usize) -> Self {
+        COCoord(n as u16)
+    }
 }
 
 impl Coordinate<CubieCube> for CPCoord {
@@ -43,6 +47,10 @@ impl Coordinate<CubieCube> for CPCoord {
 
     fn repr(self) -> usize {
         self.0 as usize
+    }
+
+    fn from_repr(n: usize) -> Self {
+        CPCoord(n as u16)
     }
 }
 
@@ -59,6 +67,10 @@ impl Coordinate<CubieCube> for EOCoord {
     fn repr(self) -> usize {
         self.0 as usize
     }
+
+    fn from_repr(n: usize) -> Self {
+        EOCoord(n as u16)
+    }
 }
 
 impl Coordinate<CubieCube> for EPCoord {
@@ -73,6 +85,10 @@ impl Coordinate<CubieCube> for EPCoord {
 
     fn repr(self) -> usize {
         self.0 as usize
+    }
+
+    fn from_repr(n: usize) -> Self {
+        EPCoord(n as u32)
     }
 }
 

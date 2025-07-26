@@ -78,16 +78,21 @@ impl DrSymmetry {
 
         res
     }
+
+    // lol
+    /// An array of each symmetry
+    #[rustfmt::ignore]
+    pub const ARRAY: [DrSymmetry; 16] = [DrSymmetry(0), DrSymmetry(1), DrSymmetry(2), DrSymmetry(3), DrSymmetry(4), DrSymmetry(5), DrSymmetry(6), DrSymmetry(7), DrSymmetry(8), DrSymmetry(9), DrSymmetry(10), DrSymmetry(11), DrSymmetry(12), DrSymmetry(13), DrSymmetry(14), DrSymmetry(15)];
 }
 
 impl CubieCube {
     /// Obtain the cube given by applying some symmetry
-    fn apply_dr_symmetry(self, sym: DrSymmetry) -> CubieCube {
+    pub(super) fn apply_dr_symmetry(self, sym: DrSymmetry) -> CubieCube {
         self.multiply_cube(sym.to_cubie())
     }
 
     /// Obtain the cube given by conjugating by some symmetry. We conjugate in the order S C S^-1
-    fn conjuate_dr_symmetry(self, sym: DrSymmetry) -> CubieCube {
+    pub(super) fn conjugate_dr_symmetry(self, sym: DrSymmetry) -> CubieCube {
         sym.to_cubie()
             .multiply_cube(self)
             .multiply_cube(sym.to_cubie().inverse())
@@ -95,13 +100,13 @@ impl CubieCube {
 }
 
 /// Multiplication table for the `DrSymmetry` group.
-struct DrSymTable {
+pub struct DrSymTable {
     table: [[DrSymmetry; 16]; 16],
 }
 
 impl DrSymTable {
     /// Generate the table
-    fn generate() -> Self {
+    pub fn generate() -> Self {
         use std::array::from_fn;
 
         let cubie_syms: [_; 16] = from_fn(|n| DrSymmetry(n as u8).to_cubie());
@@ -119,7 +124,7 @@ impl DrSymTable {
     }
 
     /// Multiply two symmetries
-    fn multiply(&self, a: DrSymmetry, b: DrSymmetry) -> DrSymmetry {
+    pub fn multiply(&self, a: DrSymmetry, b: DrSymmetry) -> DrSymmetry {
         self.table[a.0 as usize][b.0 as usize]
     }
 }
