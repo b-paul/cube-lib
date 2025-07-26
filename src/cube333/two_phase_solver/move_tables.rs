@@ -125,12 +125,12 @@ pub enum DrMove {
     B2,
     #[cfg_attr(
         test,
-        proptest(strategy = "(1..=3u8).prop_map(|n| DrMove::U(n))", weight = 3)
+        proptest(strategy = "(1..=3u8).prop_map(DrMove::U)", weight = 3)
     )]
     U(u8),
     #[cfg_attr(
         test,
-        proptest(strategy = "(1..=3u8).prop_map(|n| DrMove::D(n))", weight = 3)
+        proptest(strategy = "(1..=3u8).prop_map(DrMove::D)", weight = 3)
     )]
     D(u8),
 }
@@ -272,7 +272,7 @@ mod test {
         let co_table = COMoveTable::generate();
         let eo_table = EOMoveTable::generate();
         let eslice_table = ESliceEdgeMoveTable::generate();
-        proptest!(|(mvs in vec(any::<Move333>(), 0..20).prop_map(|v| MoveSequence(v)))| {
+        proptest!(|(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence))| {
             diagram_commutes(&co_table, CubieCube::SOLVED, mvs.clone());
             diagram_commutes(&eo_table, CubieCube::SOLVED, mvs.clone());
             diagram_commutes(&eslice_table, CubieCube::SOLVED, mvs.clone());
@@ -284,7 +284,7 @@ mod test {
         let cp_table = DominoCPMoveTable::generate();
         let ep_table = DominoEPMoveTable::generate();
         let eslice_table = DominoESliceMoveTable::generate();
-        proptest!(|(mvs in vec(any::<DrMove>(), 0..20).prop_map(|v| MoveSequence(v)))| {
+        proptest!(|(mvs in vec(any::<DrMove>(), 0..20).prop_map(MoveSequence))| {
             diagram_commutes(&cp_table, CubieCube::SOLVED, mvs.clone());
             diagram_commutes(&ep_table, CubieCube::SOLVED, mvs.clone());
             diagram_commutes(&eslice_table, CubieCube::SOLVED, mvs.clone());
