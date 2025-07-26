@@ -123,15 +123,9 @@ pub enum DrMove {
     L2,
     F2,
     B2,
-    #[cfg_attr(
-        test,
-        proptest(strategy = "(1..=3u8).prop_map(DrMove::U)", weight = 3)
-    )]
+    #[cfg_attr(test, proptest(strategy = "(1..=3u8).prop_map(DrMove::U)", weight = 3))]
     U(u8),
-    #[cfg_attr(
-        test,
-        proptest(strategy = "(1..=3u8).prop_map(DrMove::D)", weight = 3)
-    )]
+    #[cfg_attr(test, proptest(strategy = "(1..=3u8).prop_map(DrMove::D)", weight = 3))]
     D(u8),
 }
 
