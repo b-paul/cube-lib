@@ -287,27 +287,27 @@ mod tests {
 
     proptest! {
         #[test]
-        fn cancel_same_moves(mvs in vec(any::<Move333>(), 0..20).prop_map(|v| MoveSequence(v))) {
+        fn cancel_same_moves(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence)) {
             let cancelled = mvs.clone().cancel();
             assert!(cancelled.len() <= mvs.len());
             assert_eq!(CubieCube::SOLVED.make_moves(mvs), CubieCube::SOLVED.make_moves(cancelled));
         }
 
         #[test]
-        fn invert_identity(mvs in vec(any::<Move333>(), 0..20).prop_map(|v| MoveSequence(v))) {
+        fn invert_identity(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence)) {
             let cancelled = mvs.clone().cancel();
             assert_eq!(CubieCube::SOLVED.make_moves(mvs.clone()).make_moves(mvs.inverse()), CubieCube::SOLVED);
             assert!(cancelled.clone().append(cancelled.clone().inverse()).cancel().is_empty());
         }
 
         #[test]
-        fn cancel_idemotent(mvs in vec(any::<Move333>(), 0..20).prop_map(|v| MoveSequence(v))) {
+        fn cancel_idemotent(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence)) {
             let cancelled = mvs.clone().cancel();
             assert_eq!(cancelled.clone().cancel(), cancelled);
         }
 
         #[test]
-        fn inverse_apply(mvs in vec(any::<Move333>(), 0..20).prop_map(|v| MoveSequence(v))) {
+        fn inverse_apply(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence)) {
             // TODO use real random state for this proptest! doing random moves is silly!
             let fake_random_state = CubieCube::SOLVED.make_moves(mvs);
             assert_eq!(CubieCube::SOLVED, fake_random_state.clone().multiply_cube(fake_random_state.clone().inverse()));
