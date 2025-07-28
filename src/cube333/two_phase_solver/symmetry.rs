@@ -2,6 +2,51 @@
 
 use crate::cube333::{Corner as C, CornerTwist as CT, CubieCube, Edge as E, EdgeFlip as EF};
 
+pub trait Symmetry: Copy + Default + Eq {
+    /// A representation of this symmetry as a usize, for use in table lookups.
+    fn repr(self) -> usize;
+
+    /// Convert the representation of a symmetry to the symmetry itself. We assume 0 corresponds to
+    /// the identity symmetry.
+    fn from_repr(n: usize) -> Self;
+
+    /// Iterator over every symmetry in order of representation
+    fn get_all() -> impl Iterator<Item = Self>;
+
+    /// Obtain a CubieCube that applies this symmetry when multiplied.
+    fn to_puzzle(self) -> CubieCube;
+}
+
+/// Multiplication table for a `Symmetry` group.
+pub struct SymMultTable<S: Symmetry, const COUNT: usize> {
+    table: [[S; COUNT]; COUNT],
+}
+
+impl<S: Symmetry, const COUNT: usize> SymMultTable<S, COUNT> {
+    /// Generate the table
+    pub fn generate() -> Self {
+        use std::array::from_fn;
+
+        let cubie_syms: [_; COUNT] = from_fn(|n| S::from_repr(n).to_puzzle());
+
+        let table = from_fn(|a| {
+            from_fn(|b| {
+                let a = S::from_repr(a);
+                let b = S::from_repr(b);
+                let c = a.to_puzzle().multiply_cube(b.to_puzzle());
+                S::from_repr(cubie_syms.iter().position(|d| &c == d).unwrap())
+            })
+        });
+
+        SymMultTable { table }
+    }
+
+    /// Multiply two symmetries
+    pub fn multiply(&self, a: S, b: S) -> S {
+        self.table[a.repr()][b.repr()]
+    }
+}
+
 /// An element of the set of symmetries of a cube that preserve domino reduction. This is generated
 /// by:
 /// - A 180 degree rotation around the F/B axis (aka F2)
@@ -16,6 +61,8 @@ use crate::cube333::{Corner as C, CornerTwist as CT, CubieCube, Edge as E, EdgeF
 // We can just think of this 4 bit number as an identifier for each symmetry.
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
 pub struct DrSymmetry(u8);
+
+pub type DrSymMultTable = SymMultTable<DrSymmetry, 16>;
 
 /// A cube that, when multiplied, applies the F2 symmetry.
 #[rustfmt::skip]
@@ -60,8 +107,26 @@ impl DrSymmetry {
         (self.0 >> 2 & 3) as usize
     }
 
-    /// Obtain a CubieCube that applies this symmetry when multiplied.
-    fn to_cubie(self) -> CubieCube {
+    // lol
+    /// An array of each symmetry
+    #[rustfmt::skip]
+    pub const ARRAY: [DrSymmetry; 16] = [DrSymmetry(0), DrSymmetry(1), DrSymmetry(2), DrSymmetry(3), DrSymmetry(4), DrSymmetry(5), DrSymmetry(6), DrSymmetry(7), DrSymmetry(8), DrSymmetry(9), DrSymmetry(10), DrSymmetry(11), DrSymmetry(12), DrSymmetry(13), DrSymmetry(14), DrSymmetry(15)];
+}
+
+impl Symmetry for DrSymmetry {
+    fn repr(self) -> usize {
+        self.0 as usize
+    }
+
+    fn from_repr(n: usize) -> Self {
+        DrSymmetry(n as u8)
+    }
+
+    fn get_all() -> impl Iterator<Item = Self> {
+        Self::ARRAY.into_iter()
+    }
+
+    fn to_puzzle(self) -> CubieCube {
         let mut res = CubieCube::SOLVED;
 
         for _ in 0..self.rl2_count() {
@@ -78,54 +143,19 @@ impl DrSymmetry {
 
         res
     }
-
-    // lol
-    /// An array of each symmetry
-    #[rustfmt::ignore]
-    pub const ARRAY: [DrSymmetry; 16] = [DrSymmetry(0), DrSymmetry(1), DrSymmetry(2), DrSymmetry(3), DrSymmetry(4), DrSymmetry(5), DrSymmetry(6), DrSymmetry(7), DrSymmetry(8), DrSymmetry(9), DrSymmetry(10), DrSymmetry(11), DrSymmetry(12), DrSymmetry(13), DrSymmetry(14), DrSymmetry(15)];
 }
 
 impl CubieCube {
     /// Obtain the cube given by applying some symmetry
-    pub(super) fn apply_dr_symmetry(self, sym: DrSymmetry) -> CubieCube {
-        self.multiply_cube(sym.to_cubie())
+    pub(super) fn apply_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
+        self.multiply_cube(sym.to_puzzle())
     }
 
     /// Obtain the cube given by conjugating by some symmetry. We conjugate in the order S C S^-1
-    pub(super) fn conjugate_dr_symmetry(self, sym: DrSymmetry) -> CubieCube {
-        sym.to_cubie()
+    pub(super) fn conjugate_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
+        sym.to_puzzle()
             .multiply_cube(self)
-            .multiply_cube(sym.to_cubie().inverse())
-    }
-}
-
-/// Multiplication table for the `DrSymmetry` group.
-pub struct DrSymTable {
-    table: [[DrSymmetry; 16]; 16],
-}
-
-impl DrSymTable {
-    /// Generate the table
-    pub fn generate() -> Self {
-        use std::array::from_fn;
-
-        let cubie_syms: [_; 16] = from_fn(|n| DrSymmetry(n as u8).to_cubie());
-
-        let table = from_fn(|a| {
-            from_fn(|b| {
-                let a = DrSymmetry(a as u8);
-                let b = DrSymmetry(b as u8);
-                let c = a.to_cubie().multiply_cube(b.to_cubie());
-                DrSymmetry(cubie_syms.iter().position(|d| &c == d).unwrap() as u8)
-            })
-        });
-
-        DrSymTable { table }
-    }
-
-    /// Multiply two symmetries
-    pub fn multiply(&self, a: DrSymmetry, b: DrSymmetry) -> DrSymmetry {
-        self.table[a.0 as usize][b.0 as usize]
+            .multiply_cube(sym.to_puzzle().inverse())
     }
 }
 
@@ -137,9 +167,9 @@ mod test {
 
     #[test]
     fn multiplication_correct() {
-        let table = DrSymTable::generate();
+        let table = DrSymMultTable::generate();
         proptest!(|(sym1 in (0..16u8).prop_map(DrSymmetry), sym2 in (0..16u8).prop_map(DrSymmetry))| {
-            assert_eq!(table.multiply(sym1, sym2).to_cubie(), sym1.to_cubie().multiply_cube(sym2.to_cubie()));
+            assert_eq!(table.multiply(sym1, sym2).to_puzzle(), sym1.to_puzzle().multiply_cube(sym2.to_puzzle()));
         })
     }
 }
