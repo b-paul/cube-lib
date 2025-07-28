@@ -11,7 +11,7 @@ pub trait Coordinate<P>: Copy + Default + Eq {
     /// The number of possible coordinate states.
     fn count() -> usize;
 
-    /// A representation of this coordinate as a usize, for use, in table lookups.
+    /// A representation of this coordinate as a usize, for use in table lookups.
     fn repr(self) -> usize;
 
     // TODO this might not be ideal it's not very type safe idk

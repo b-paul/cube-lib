@@ -1,12 +1,12 @@
 //! This module contains the coordinate representations of cube states relevant to the two phases
 //! of these solver.
 
+use super::symmetry::Symmetry;
 use crate::coord::{Coordinate, FromCoordinate};
 use crate::cube333::{
     CubieCube,
     coordcube::{COCoord, CPCoord, EOCoord},
 };
-use super::symmetry::DrSymmetry;
 
 // TODO this is kinda unreadable lol
 // this is copied from coordcube.rs then modified hmmm maybe copy pasting isn't ideal
@@ -123,9 +123,10 @@ impl Coordinate<CubieCube> for DominoESliceCoord {
     }
 }
 
-/// A symmetry coordinate over `DrSymmetry`s. A SymCoordinate should include both what equivalence
+/// A symmetry coordinate over a `Symmetry`. A SymCoordinate should include both what equivalence
 /// class the coordinate is in, along with the symmetry it has from the representant.
-pub trait DrSymCoordinate: Copy + Default + Eq {
+pub trait SymCoordinate: Copy + Default + Eq {
+    type Sym: Symmetry;
     type Raw: Coordinate<CubieCube>;
 
     /// The number of possible coordinate states.
@@ -135,14 +136,14 @@ pub trait DrSymCoordinate: Copy + Default + Eq {
     fn classes() -> usize;
 
     /// A representation of this coordinate as a usize, for use, in table lookups.
-    fn repr(self) -> (usize, DrSymmetry);
+    fn repr(self) -> (usize, Self::Sym);
 
     /// Convert the representation of a coordinate to the coordinate itself. We assume 0 with the
     /// identity symmetry corresponds to the solved state.
-    fn from_repr(idx: usize, sym: DrSymmetry) -> Self;
+    fn from_repr(idx: usize, sym: Self::Sym) -> Self;
 }
 
-pub struct RawDrSymTable<S: DrSymCoordinate>
+pub struct RawDrSymTable<S: SymCoordinate>
 where
     CubieCube: FromCoordinate<S::Raw>,
 {
@@ -150,7 +151,7 @@ where
     sym_to_raw: Box<[S::Raw]>,
 }
 
-impl<S: DrSymCoordinate> RawDrSymTable<S>
+impl<S: SymCoordinate> RawDrSymTable<S>
 where
     CubieCube: FromCoordinate<S::Raw>,
 {
@@ -173,8 +174,8 @@ where
 
             // Then we go over every symmetry of this coordinate, and update the tables based on
             // them.
-            for sym in DrSymmetry::ARRAY {
-                let d = c.clone().conjugate_dr_symmetry(sym);
+            for sym in S::Sym::get_all() {
+                let d = c.clone().conjugate_symmetry(sym);
                 let raw2 = S::Raw::from_puzzle(&d);
                 raw_to_sym[raw2.repr()] = S::from_repr(sym_idx, sym);
             }
