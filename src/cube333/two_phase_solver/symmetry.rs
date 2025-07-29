@@ -17,6 +17,20 @@ pub trait Symmetry: Copy + Default + Eq {
     fn to_puzzle(self) -> CubieCube;
 }
 
+impl CubieCube {
+    /// Obtain the cube given by applying some symmetry
+    pub(super) fn apply_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
+        self.multiply_cube(sym.to_puzzle())
+    }
+
+    /// Obtain the cube given by conjugating by some symmetry. We conjugate in the order S C S^-1
+    pub(super) fn conjugate_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
+        sym.to_puzzle()
+            .multiply_cube(self)
+            .multiply_cube(sym.to_puzzle().inverse())
+    }
+}
+
 /// Multiplication table for a `Symmetry` group.
 pub struct SymMultTable<S: Symmetry, const COUNT: usize> {
     table: [[S; COUNT]; COUNT],
@@ -59,7 +73,7 @@ impl<S: Symmetry, const COUNT: usize> SymMultTable<S, COUNT> {
 // We multiply from top to bottom of this list. It doesn't really make sense to expose this
 // information publicly, since we could have multiplied different generators in a different order.
 // We can just think of this 4 bit number as an identifier for each symmetry.
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct DrSymmetry(u8);
 
 pub type DrSymMultTable = SymMultTable<DrSymmetry, 16>;
@@ -145,17 +159,68 @@ impl Symmetry for DrSymmetry {
     }
 }
 
-impl CubieCube {
-    /// Obtain the cube given by applying some symmetry
-    pub(super) fn apply_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
-        self.multiply_cube(sym.to_puzzle())
+/// An element of the set of symmetries of a cube that preserve domino reduction. This is generated
+/// by:
+/// - A 180 degree rotation around the F/B axis (aka F2)
+/// - A 180 degree rotation around the U/D axis (aka U2)
+/// - A reflection around the R-L slice (aka RL2)
+// 0s bit is R-L
+// 1s bit F/B
+// 2s bit U/D
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
+pub struct HalfSymmetry(u8);
+
+impl HalfSymmetry {
+    /// Returns the power of RL2 in the standard product notation of this symmetry.
+    fn rl2_count(self) -> usize {
+        (self.0 & 1) as usize
     }
 
-    /// Obtain the cube given by conjugating by some symmetry. We conjugate in the order S C S^-1
-    pub(super) fn conjugate_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
-        sym.to_puzzle()
-            .multiply_cube(self)
-            .multiply_cube(sym.to_puzzle().inverse())
+    /// Returns the power of F2 in the standard product notation of this symmetry.
+    fn f2_count(self) -> usize {
+        (self.0 >> 1 & 1) as usize
+    }
+
+    /// Returns the power of U4 in the standard product notation of this symmetry.
+    fn u2_count(self) -> usize {
+        (self.0 >> 2 & 3) as usize
+    }
+
+    // lol
+    /// An array of each symmetry
+    #[rustfmt::skip]
+    pub const ARRAY: [HalfSymmetry; 8] = [HalfSymmetry(0), HalfSymmetry(1), HalfSymmetry(2), HalfSymmetry(3), HalfSymmetry(4), HalfSymmetry(5), HalfSymmetry(6), HalfSymmetry(7)];
+}
+
+impl Symmetry for HalfSymmetry {
+    fn repr(self) -> usize {
+        self.0 as usize
+    }
+
+    fn from_repr(n: usize) -> Self {
+        HalfSymmetry(n as u8)
+    }
+
+    fn get_all() -> impl Iterator<Item = Self> {
+        Self::ARRAY.into_iter()
+    }
+
+    fn to_puzzle(self) -> CubieCube {
+        let mut res = CubieCube::SOLVED;
+
+        for _ in 0..self.rl2_count() {
+            res = res.multiply_cube(SYM_RL2);
+        }
+
+        for _ in 0..self.f2_count() {
+            res = res.multiply_cube(SYM_F2);
+        }
+
+        for _ in 0..self.u2_count() {
+            res = res.multiply_cube(SYM_U4.multiply_cube(SYM_U4));
+        }
+
+        res
     }
 }
 
