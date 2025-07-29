@@ -96,6 +96,8 @@ const SYM_U4: CubieCube = CubieCube {
     ep: [E::UR, E::UF, E::UL, E::UB, E::DR, E::DF, E::DL, E::DB, E::BR, E::FR, E::FL, E::BL],
 };
 
+// TODO BUG!!! reflection isn't an element of the cube!!! applying this symmetry is meant to flip
+// clockwise and anticlockwise, but here it doesn't!
 /// A cube that, when multiplied, applies the RL2 symmetry.
 #[rustfmt::skip]
 const SYM_RL2: CubieCube = CubieCube {
@@ -181,9 +183,9 @@ impl HalfSymmetry {
         (self.0 >> 1 & 1) as usize
     }
 
-    /// Returns the power of U4 in the standard product notation of this symmetry.
+    /// Returns the power of U2 in the standard product notation of this symmetry.
     fn u2_count(self) -> usize {
-        (self.0 >> 2 & 3) as usize
+        (self.0 >> 2 & 1) as usize
     }
 
     // lol
