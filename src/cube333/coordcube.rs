@@ -1,20 +1,20 @@
 use super::{Corner, CornerTwist, CubieCube, Edge, EdgeFlip};
-use crate::coord::Coordinate;
+use crate::coord::{Coordinate, FromCoordinate};
 
 /// A coordinate representation of the corner orientation of a cube with respect to the U/F faces.
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct COCoord(u16);
 
 /// A coordinate representation of the corner permutation of a cube with respect to the U/F faces.
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct CPCoord(u16);
 
 /// A coordinate representation of the edge orientation of a cube with respect to the U/F faces.
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct EOCoord(u16);
 
 /// A coordinate representation of the edge permutation of a cube with respect to the U/F faces.
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct EPCoord(u32);
 
 impl Coordinate<CubieCube> for COCoord {
@@ -33,6 +33,31 @@ impl Coordinate<CubieCube> for COCoord {
 
     fn from_repr(n: usize) -> Self {
         COCoord(n as u16)
+    }
+}
+
+impl FromCoordinate<COCoord> for CubieCube {
+    fn set_coord(&mut self, coord: COCoord) {
+        let mut first = CornerTwist::Oriented;
+        let mut n = coord.0;
+
+        for i in (1..8).rev() {
+            self.co[i] = match n % 3 {
+                0 => CornerTwist::Oriented,
+                1 => {
+                    first = first.anticlockwise();
+                    CornerTwist::Clockwise
+                }
+                2 => {
+                    first = first.clockwise();
+                    CornerTwist::AntiClockwise
+                }
+                _ => unreachable!(),
+            };
+            n /= 3;
+        }
+
+        self.co[0] = first;
     }
 }
 
@@ -70,6 +95,27 @@ impl Coordinate<CubieCube> for EOCoord {
 
     fn from_repr(n: usize) -> Self {
         EOCoord(n as u16)
+    }
+}
+
+impl FromCoordinate<EOCoord> for CubieCube {
+    fn set_coord(&mut self, coord: EOCoord) {
+        let mut first = EdgeFlip::Oriented;
+        let mut n = coord.0;
+
+        for i in (1..12).rev() {
+            self.eo[i] = match n % 2 {
+                0 => EdgeFlip::Oriented,
+                1 => {
+                    first = first.flip();
+                    EdgeFlip::Flipped
+                }
+                _ => unreachable!(),
+            };
+            n /= 2;
+        }
+
+        self.eo[0] = first;
     }
 }
 
@@ -240,6 +286,7 @@ impl CubieCube {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::cube333::{
         Corner, CornerTwist, CubieCube, Edge, EdgeFlip, StickerCube,
         coordcube::{CoordCube, CubieToCoordError},
@@ -328,5 +375,26 @@ mod tests {
         swap.cp[0] = Corner::UBR;
         swap.cp[3] = Corner::UFR;
         assert!(swap.to_coord().is_ok());
+    }
+
+    use proptest::prelude::*;
+
+    proptest! {
+        // TODO this test is not good, it should take a *random state* as input to test that the
+        // last piece is set correctly, but I haven't been bothered to make that yet...
+
+        #[test]
+        fn convert_invertible_co(c in (0..2187u16).prop_map(COCoord)) {
+            let mut cube = CubieCube::SOLVED;
+            cube.set_coord(c);
+            assert_eq!(c, COCoord::from_puzzle(&cube));
+        }
+
+        #[test]
+        fn convert_invertible_eo(c in (0..2048u16).prop_map(EOCoord)) {
+            let mut cube = CubieCube::SOLVED;
+            cube.set_coord(c);
+            assert_eq!(c, EOCoord::from_puzzle(&cube));
+        }
     }
 }

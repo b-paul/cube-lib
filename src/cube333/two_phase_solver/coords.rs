@@ -1,7 +1,7 @@
 //! This module contains the coordinate representations of cube states relevant to the two phases
 //! of these solver.
 
-use super::symmetry::Symmetry;
+use super::symmetry::{DrSymmetry, HalfSymmetry, Symmetry};
 use crate::coord::{Coordinate, FromCoordinate};
 use crate::cube333::{
     CubieCube,
@@ -23,17 +23,17 @@ fn to_p_coord<const COUNT: usize, const LOWER: usize, const UPPER: usize>(
 }
 
 /// Coordinate for positions of E slice edges (ignoring what the edges actually arge)
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct ESliceEdgeCoord(u16);
 
 /// Coordinate for positions of U/D layer edges, assuming the cube is in and says in domino
 /// reduction.
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct DominoEPCoord(u16);
 
 /// Coordinate for positions of the E slice edges, assuming the cube is in and says in domino
 /// reduction.
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct DominoESliceCoord(u16);
 
 impl Coordinate<CubieCube> for ESliceEdgeCoord {
@@ -143,21 +143,21 @@ pub trait SymCoordinate: Copy + Default + Eq {
     fn from_repr(idx: usize, sym: Self::Sym) -> Self;
 }
 
-pub struct RawDrSymTable<S: SymCoordinate>
+pub struct RawSymTable<S: SymCoordinate>
 where
     CubieCube: FromCoordinate<S::Raw>,
 {
     raw_to_sym: Box<[S]>,
-    sym_to_raw: Box<[S::Raw]>,
+    class_to_repr: Box<[S::Raw]>,
 }
 
-impl<S: SymCoordinate> RawDrSymTable<S>
+impl<S: SymCoordinate> RawSymTable<S>
 where
     CubieCube: FromCoordinate<S::Raw>,
 {
     pub fn generate() -> Self {
         let mut raw_to_sym = vec![S::default(); S::Raw::count()].into_boxed_slice();
-        let mut sym_to_raw = vec![S::Raw::default(); S::count()].into_boxed_slice();
+        let mut class_to_repr = vec![S::Raw::default(); S::classes()].into_boxed_slice();
 
         let mut sym_idx = 0;
 
@@ -165,7 +165,7 @@ where
             // Skip entries we have already initialised (note that states symmetric to the solved
             // state will not have solved SymCoordinate since a SymCoordinate will include its
             // symmetry)
-            if sym_to_raw[raw.repr()] != S::Raw::default() {
+            if raw_to_sym[raw.repr()] != S::default() {
                 continue;
             }
 
@@ -180,14 +180,72 @@ where
                 raw_to_sym[raw2.repr()] = S::from_repr(sym_idx, sym);
             }
 
-            sym_to_raw[sym_idx] = raw;
+            class_to_repr[sym_idx] = raw;
             sym_idx += 1;
         }
 
-        RawDrSymTable {
+        println!("{sym_idx}");
+
+        RawSymTable {
             raw_to_sym,
-            sym_to_raw,
+            class_to_repr,
         }
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
+pub struct COSymCoord(u16);
+
+impl SymCoordinate for COSymCoord {
+    type Sym = DrSymmetry;
+
+    type Raw = COCoord;
+
+    fn count() -> usize {
+        Self::classes() * 16
+    }
+
+    fn classes() -> usize {
+        1000
+    }
+
+    fn repr(self) -> (usize, Self::Sym) {
+        (
+            (self.0 >> 4) as usize,
+            DrSymmetry::from_repr((self.0 & 15) as usize),
+        )
+    }
+
+    fn from_repr(idx: usize, sym: Self::Sym) -> Self {
+        COSymCoord((idx as u16) << 4 | (sym.repr() as u16))
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
+pub struct EOSymCoord(u16);
+
+impl SymCoordinate for EOSymCoord {
+    type Sym = HalfSymmetry;
+
+    type Raw = EOCoord;
+
+    fn count() -> usize {
+        Self::classes() * 8
+    }
+
+    fn classes() -> usize {
+        336
+    }
+
+    fn repr(self) -> (usize, Self::Sym) {
+        (
+            (self.0 >> 3) as usize,
+            HalfSymmetry::from_repr((self.0 & 7) as usize),
+        )
+    }
+
+    fn from_repr(idx: usize, sym: Self::Sym) -> Self {
+        EOSymCoord((idx as u16) << 3 | (sym.repr() as u16))
     }
 }
 
@@ -239,7 +297,7 @@ mod test {
 
     use itertools::Itertools;
 
-    use super::ESliceEdgeCoord;
+    use super::*;
     use crate::{coord::Coordinate, cube333::CubieCube};
 
     #[test]
@@ -258,5 +316,12 @@ mod test {
         }
         assert!(coords.len() == ESliceEdgeCoord::count());
         assert!(coords.iter().all(|c| c.repr() < ESliceEdgeCoord::count()));
+    }
+
+    #[test]
+    fn sym_table_generates() {
+        RawSymTable::<COSymCoord>::generate();
+        RawSymTable::<EOSymCoord>::generate();
+        panic!();
     }
 }
