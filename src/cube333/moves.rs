@@ -189,6 +189,8 @@ impl CubieCube {
         (0..mv.count).fold(self, |c, _| c.make_move_type(mv.ty))
     }
 
+    // TODO make this const please that would be very handy :)
+
     /// Make a single application of a move
     pub fn make_move_type(self, mv: Move333Type) -> CubieCube {
         let co_offsets = CO_OFFSETS[mv as usize];

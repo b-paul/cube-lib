@@ -13,21 +13,28 @@ pub trait Symmetry: Copy + Default + Eq {
     /// Iterator over every symmetry in order of representation
     fn get_all() -> impl Iterator<Item = Self>;
 
-    /// Obtain a CubieCube that applies this symmetry when multiplied.
-    fn to_puzzle(self) -> CubieCube;
+    /// Apply this symmetry to the given puzzle, written P S
+    fn apply(&self, cube: CubieCube) -> CubieCube;
+
+    /// Apply the inverse of this symmetry to the given puzzle, written P S^-1
+    fn apply_inverse(&self, cube: CubieCube) -> CubieCube;
+
+    /// Conjugate the given puzzle by this symmetry, written S P S^-1
+    fn conjugate(&self, cube: CubieCube) -> CubieCube {
+        self.apply(CubieCube::SOLVED)
+            .multiply_cube(self.apply_inverse(cube))
+    }
 }
 
 impl CubieCube {
     /// Obtain the cube given by applying some symmetry
     pub(super) fn apply_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
-        self.multiply_cube(sym.to_puzzle())
+        sym.apply(self)
     }
 
     /// Obtain the cube given by conjugating by some symmetry. We conjugate in the order S C S^-1
     pub(super) fn conjugate_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
-        sym.to_puzzle()
-            .multiply_cube(self)
-            .multiply_cube(sym.to_puzzle().inverse())
+        sym.conjugate(self)
     }
 }
 
@@ -41,13 +48,15 @@ impl<S: Symmetry, const COUNT: usize> SymMultTable<S, COUNT> {
     pub fn generate() -> Self {
         use std::array::from_fn;
 
-        let cubie_syms: [_; COUNT] = from_fn(|n| S::from_repr(n).to_puzzle());
+        let cubie_syms: [_; COUNT] = from_fn(|n| S::from_repr(n).apply(CubieCube::SOLVED));
 
         let table = from_fn(|a| {
             from_fn(|b| {
                 let a = S::from_repr(a);
                 let b = S::from_repr(b);
-                let c = a.to_puzzle().multiply_cube(b.to_puzzle());
+                let c = a
+                    .apply(CubieCube::SOLVED)
+                    .multiply_cube(b.apply(CubieCube::SOLVED));
                 S::from_repr(cubie_syms.iter().position(|d| &c == d).unwrap())
             })
         });
@@ -96,9 +105,8 @@ const SYM_U4: CubieCube = CubieCube {
     ep: [E::UR, E::UF, E::UL, E::UB, E::DR, E::DF, E::DL, E::DB, E::BR, E::FR, E::FL, E::BL],
 };
 
-// TODO BUG!!! reflection isn't an element of the cube!!! applying this symmetry is meant to flip
-// clockwise and anticlockwise, but here it doesn't!
-/// A cube that, when multiplied, applies the RL2 symmetry.
+/// A cube that, when multiplied, almost applies the RL2 symmetry, but additionally the corner
+/// orientations must be inverted (clockwise and anticlockwise swapped).
 #[rustfmt::skip]
 const SYM_RL2: CubieCube = CubieCube {
     co: [CT::Oriented; 8],
@@ -142,22 +150,38 @@ impl Symmetry for DrSymmetry {
         Self::ARRAY.into_iter()
     }
 
-    fn to_puzzle(self) -> CubieCube {
-        let mut res = CubieCube::SOLVED;
-
+    fn apply(&self, mut cube: CubieCube) -> CubieCube {
         for _ in 0..self.rl2_count() {
-            res = res.multiply_cube(SYM_RL2);
+            cube = cube.multiply_cube(SYM_RL2);
+            cube.co = cube.co.map(|c| c.inverse());
         }
 
         for _ in 0..self.f2_count() {
-            res = res.multiply_cube(SYM_F2);
+            cube = cube.multiply_cube(SYM_F2);
         }
 
         for _ in 0..self.u4_count() {
-            res = res.multiply_cube(SYM_U4);
+            cube = cube.multiply_cube(SYM_U4);
         }
 
-        res
+        cube
+    }
+
+    fn apply_inverse(&self, mut cube: CubieCube) -> CubieCube {
+        for _ in 0..((4 - self.u4_count()) % 4) {
+            cube = cube.multiply_cube(SYM_U4);
+        }
+
+        for _ in 0..self.f2_count() {
+            cube = cube.multiply_cube(SYM_F2);
+        }
+
+        for _ in 0..self.rl2_count() {
+            cube = cube.multiply_cube(SYM_RL2);
+            cube.co = cube.co.map(|c| c.inverse());
+        }
+
+        cube
     }
 }
 
@@ -207,22 +231,38 @@ impl Symmetry for HalfSymmetry {
         Self::ARRAY.into_iter()
     }
 
-    fn to_puzzle(self) -> CubieCube {
-        let mut res = CubieCube::SOLVED;
-
+    fn apply(&self, mut cube: CubieCube) -> CubieCube {
         for _ in 0..self.rl2_count() {
-            res = res.multiply_cube(SYM_RL2);
+            cube = cube.multiply_cube(SYM_RL2);
+            cube.co = cube.co.map(|c| c.inverse());
         }
 
         for _ in 0..self.f2_count() {
-            res = res.multiply_cube(SYM_F2);
+            cube = cube.multiply_cube(SYM_F2);
         }
 
         for _ in 0..self.u2_count() {
-            res = res.multiply_cube(SYM_U4.multiply_cube(SYM_U4));
+            cube = cube.multiply_cube(SYM_U4.multiply_cube(SYM_U4));
         }
 
-        res
+        cube
+    }
+
+    fn apply_inverse(&self, mut cube: CubieCube) -> CubieCube {
+        for _ in 0..self.u2_count() {
+            cube = cube.multiply_cube(SYM_U4.multiply_cube(SYM_U4));
+        }
+
+        for _ in 0..self.f2_count() {
+            cube = cube.multiply_cube(SYM_F2);
+        }
+
+        for _ in 0..self.rl2_count() {
+            cube = cube.multiply_cube(SYM_RL2);
+            cube.co = cube.co.map(|c| c.inverse());
+        }
+
+        cube
     }
 }
 
@@ -236,7 +276,11 @@ mod test {
     fn multiplication_correct() {
         let table = DrSymMultTable::generate();
         proptest!(|(sym1 in (0..16u8).prop_map(DrSymmetry), sym2 in (0..16u8).prop_map(DrSymmetry))| {
-            assert_eq!(table.multiply(sym1, sym2).to_puzzle(), sym1.to_puzzle().multiply_cube(sym2.to_puzzle()));
+            let cube = CubieCube::SOLVED;
+            assert_eq!(
+                table.multiply(sym1, sym2).apply(cube.clone()),
+                sym1.apply(cube.clone()).multiply_cube(sym2.apply(cube.clone()))
+            );
         })
     }
 }
