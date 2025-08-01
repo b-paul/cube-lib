@@ -172,8 +172,8 @@ where
             let mut c = CubieCube::SOLVED;
             c.set_coord(raw);
 
-            // Then we go over every symmetry of this coordinate, and update the tables based on
-            // them.
+            // Then we go over every coordinate symmetric to this one, and update the tables based
+            // on them.
             for sym in S::Sym::get_all() {
                 let d = c.clone().conjugate_symmetry(sym);
                 let raw2 = S::Raw::from_puzzle(&d);
@@ -183,8 +183,6 @@ where
             class_to_repr[sym_idx] = raw;
             sym_idx += 1;
         }
-
-        println!("{sym_idx}");
 
         RawSymTable {
             raw_to_sym,
@@ -197,7 +195,7 @@ where
 pub struct COSymCoord(u16);
 
 impl SymCoordinate for COSymCoord {
-    type Sym = DrSymmetry;
+    type Sym = HalfSymmetry;
 
     type Raw = COCoord;
 
@@ -206,18 +204,18 @@ impl SymCoordinate for COSymCoord {
     }
 
     fn classes() -> usize {
-        1000
+        324
     }
 
     fn repr(self) -> (usize, Self::Sym) {
         (
-            (self.0 >> 4) as usize,
-            DrSymmetry::from_repr((self.0 & 15) as usize),
+            (self.0 >> 3) as usize,
+            HalfSymmetry::from_repr((self.0 & 7) as usize),
         )
     }
 
     fn from_repr(idx: usize, sym: Self::Sym) -> Self {
-        COSymCoord((idx as u16) << 4 | (sym.repr() as u16))
+        COSymCoord((idx as u16) << 3 | (sym.repr() as u16))
     }
 }
 
@@ -322,6 +320,5 @@ mod test {
     fn sym_table_generates() {
         RawSymTable::<COSymCoord>::generate();
         RawSymTable::<EOSymCoord>::generate();
-        panic!();
     }
 }
