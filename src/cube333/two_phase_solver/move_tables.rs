@@ -1,12 +1,16 @@
 //! Move tables for each coordinate type
 
-use crate::coord::Coordinate;
+use crate::coord::{Coordinate, FromCoordinate};
 use crate::cube333::CubieCube;
+use crate::cube333::coordcube::{COCoord, CPCoord, EOCoord};
 use crate::cube333::moves::{Move333, Move333Type};
 use crate::moves::{Cancellation, Move, MoveSequence};
 
-use super::coords::{DominoEPCoord, DominoESliceCoord, ESliceEdgeCoord};
-use crate::cube333::coordcube::{COCoord, CPCoord, EOCoord};
+use super::coords::{
+    COSymCoord, DominoEPCoord, DominoESliceCoord, EOSymCoord, ESliceEdgeCoord, RawSymTable,
+    SymCoordinate,
+};
+use super::symmetry::SymMultTable;
 
 use std::marker::PhantomData;
 
@@ -92,6 +96,59 @@ impl<M: SubMove, C: Coordinate<CubieCube>, const MOVES: usize> MoveTable<M, C, M
 
     /// Determine what coordinate comes from applying a sequence of moves.
     fn make_moves(&self, coord: C, alg: MoveSequence<M>) -> C {
+        alg.0.into_iter().fold(coord, |c, m| self.make_move(c, m))
+    }
+}
+
+pub struct SymMoveTable<M: SubMove, S: SymCoordinate, const MOVES: usize, const SYMS: usize>
+where
+    CubieCube: FromCoordinate<S::Raw>,
+{
+    table: Box<[[S; MOVES]]>,
+    sym_mul_table: SymMultTable<S::Sym, SYMS>,
+    _phantom: PhantomData<M>,
+}
+
+impl<M: SubMove, S: SymCoordinate, const MOVES: usize, const SYMS: usize>
+    SymMoveTable<M, S, MOVES, SYMS>
+where
+    CubieCube: FromCoordinate<S::Raw>,
+{
+    pub fn generate(sym_table: &RawSymTable<S>) -> Self {
+        let table: Box<[[S; MOVES]]> = (0..S::classes())
+            .map(|i| {
+                let raw = sym_table.index_to_repr(i);
+                let mut c = CubieCube::SOLVED;
+                c.set_coord(raw);
+
+                let mut t: [S; MOVES] = std::array::from_fn(|_| Default::default());
+
+                for (mv, next) in M::successor_states(c) {
+                    t[mv.index()] = sym_table.raw_to_sym(S::Raw::from_puzzle(&next));
+                }
+
+                t
+            })
+            .collect::<Vec<_>>()
+            .into_boxed_slice();
+        let sym_mul_table = SymMultTable::generate();
+
+        SymMoveTable {
+            table,
+            sym_mul_table,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn make_move(&self, coord: S, mv: M) -> S {
+        let (idx, sym1) = coord.repr();
+        let (idx, sym2) = self.table[idx][mv.index()].repr();
+        let sym = self.sym_mul_table.multiply(sym1, sym2);
+
+        S::from_repr(idx, sym)
+    }
+
+    fn make_moves(&self, coord: S, alg: MoveSequence<M>) -> S {
         alg.0.into_iter().fold(coord, |c, m| self.make_move(c, m))
     }
 }
@@ -209,6 +266,8 @@ impl SubMove for DrMove {
 
 type COMoveTable = MoveTable<Move333, COCoord, 18>;
 type EOMoveTable = MoveTable<Move333, EOCoord, 18>;
+type COSymMoveTable = SymMoveTable<Move333, COSymCoord, 18, 8>;
+type EOSymMoveTable = SymMoveTable<Move333, EOSymCoord, 18, 8>;
 type ESliceEdgeMoveTable = MoveTable<Move333, ESliceEdgeCoord, 18>;
 type DominoCPMoveTable = MoveTable<DrMove, CPCoord, 10>;
 type DominoEPMoveTable = MoveTable<DrMove, DominoEPCoord, 10>;
@@ -261,15 +320,42 @@ mod test {
         assert_eq!(l, r);
     }
 
+    fn sym_diagram_commutes<
+        M: SubMove,
+        S: SymCoordinate + std::fmt::Debug,
+        const MOVES: usize,
+        const SYMS: usize,
+    >(
+        sym_table: &RawSymTable<S>,
+        table: &SymMoveTable<M, S, MOVES, SYMS>,
+        p: CubieCube,
+        mvs: MoveSequence<M>,
+    ) where
+        CubieCube: FromCoordinate<S::Raw>,
+    {
+        let l = table.make_moves(sym_table.puzzle_to_sym(&p), mvs.clone());
+        let r = sym_table.puzzle_to_sym(&p.make_moves(MoveSequence(
+            mvs.0.into_iter().map(|m| m.into_move()).collect(),
+        )));
+        assert_eq!(l, r);
+    }
+
     #[test]
     fn commutes_normal() {
         let co_table = COMoveTable::generate();
         let eo_table = EOMoveTable::generate();
         let eslice_table = ESliceEdgeMoveTable::generate();
+
+        let co_sym = RawSymTable::generate();
+        let co_sym_table = COSymMoveTable::generate(&co_sym);
+        let eo_sym = RawSymTable::generate();
+        let eo_sym_table = EOSymMoveTable::generate(&eo_sym);
         proptest!(|(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence))| {
             diagram_commutes(&co_table, CubieCube::SOLVED, mvs.clone());
             diagram_commutes(&eo_table, CubieCube::SOLVED, mvs.clone());
             diagram_commutes(&eslice_table, CubieCube::SOLVED, mvs.clone());
+            sym_diagram_commutes(&co_sym, &co_sym_table, CubieCube::SOLVED, mvs.clone());
+            sym_diagram_commutes(&eo_sym, &eo_sym_table, CubieCube::SOLVED, mvs.clone());
         });
     }
 

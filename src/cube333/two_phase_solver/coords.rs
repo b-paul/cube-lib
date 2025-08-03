@@ -189,6 +189,18 @@ where
             class_to_repr,
         }
     }
+
+    pub fn raw_to_sym(&self, raw: S::Raw) -> S {
+        self.raw_to_sym[raw.repr()]
+    }
+
+    pub fn index_to_repr(&self, idx: usize) -> S::Raw {
+        self.class_to_repr[idx]
+    }
+
+    pub fn puzzle_to_sym(&self, p: &CubieCube) -> S {
+        self.raw_to_sym(S::Raw::from_puzzle(p))
+    }
 }
 
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
