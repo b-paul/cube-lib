@@ -141,6 +141,11 @@ pub trait SymCoordinate: Copy + Default + Eq {
     /// Convert the representation of a coordinate to the coordinate itself. We assume 0 with the
     /// identity symmetry corresponds to the solved state.
     fn from_repr(idx: usize, sym: Self::Sym) -> Self;
+
+    /// Obtain the equivalence class this coordinate represents.
+    fn class(self) -> usize {
+        self.repr().0
+    }
 }
 
 pub struct RawSymTable<S: SymCoordinate>
@@ -308,7 +313,14 @@ mod test {
     use itertools::Itertools;
 
     use super::*;
-    use crate::{coord::Coordinate, cube333::CubieCube};
+    use crate::{
+        coord::Coordinate,
+        cube333::{CubieCube, moves::Move333},
+        moves::MoveSequence,
+    };
+
+    use proptest::collection::vec;
+    use proptest::prelude::*;
 
     #[test]
     fn e_slice_edge_uniqueness() {
@@ -332,5 +344,18 @@ mod test {
     fn sym_table_generates() {
         RawSymTable::<COSymCoord>::generate();
         RawSymTable::<EOSymCoord>::generate();
+    }
+
+    #[test]
+    fn sym_class_repr_in_class() {
+        let co_sym = RawSymTable::<COSymCoord>::generate();
+        let eo_sym = RawSymTable::<EOSymCoord>::generate();
+        proptest!(|(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence))| {
+            let c = CubieCube::SOLVED.make_moves(mvs);
+            let co = COCoord::from_puzzle(&c);
+            assert_eq!(co_sym.raw_to_sym(co_sym.index_to_repr(co_sym.raw_to_sym(co).class())).class(), co_sym.raw_to_sym(co).class());
+            let eo = EOCoord::from_puzzle(&c);
+            assert_eq!(eo_sym.raw_to_sym(eo_sym.index_to_repr(eo_sym.raw_to_sym(eo).class())).class(), eo_sym.raw_to_sym(eo).class());
+        })
     }
 }
