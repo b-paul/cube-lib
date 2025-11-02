@@ -270,17 +270,23 @@ impl Symmetry for HalfSymmetry {
 mod test {
     use super::*;
 
-    use proptest::prelude::*;
+    fn check_multiplication_correct<S: Symmetry, const COUNT: usize>() {
+        let table = SymMultTable::<S, COUNT>::generate();
+        for sym1 in S::get_all() {
+            for sym2 in S::get_all() {
+                let cube = CubieCube::SOLVED;
+                assert_eq!(
+                    table.multiply(sym1, sym2).apply(cube.clone()),
+                    sym1.apply(cube.clone())
+                        .multiply_cube(sym2.apply(cube.clone()))
+                );
+            }
+        }
+    }
 
     #[test]
     fn multiplication_correct() {
-        let table = DrSymMultTable::generate();
-        proptest!(|(sym1 in (0..16u8).prop_map(DrSymmetry), sym2 in (0..16u8).prop_map(DrSymmetry))| {
-            let cube = CubieCube::SOLVED;
-            assert_eq!(
-                table.multiply(sym1, sym2).apply(cube.clone()),
-                sym1.apply(cube.clone()).multiply_cube(sym2.apply(cube.clone()))
-            );
-        })
+        check_multiplication_correct::<DrSymmetry, 16>();
+        check_multiplication_correct::<HalfSymmetry, 8>();
     }
 }
