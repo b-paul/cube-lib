@@ -136,16 +136,19 @@ pub trait SymCoordinate: Copy + Default + Eq {
     fn classes() -> usize;
 
     /// A representation of this coordinate as a usize, for use, in table lookups.
-    fn repr(self) -> (usize, Self::Sym);
+    fn repr(self) -> (usize, Self::Sym) {
+        (self.class(), self.sym())
+    }
 
     /// Convert the representation of a coordinate to the coordinate itself. We assume 0 with the
     /// identity symmetry corresponds to the solved state.
     fn from_repr(idx: usize, sym: Self::Sym) -> Self;
 
     /// Obtain the equivalence class this coordinate represents.
-    fn class(self) -> usize {
-        self.repr().0
-    }
+    fn class(self) -> usize;
+
+    /// Obtain the underlying symmetry of this ooordinate.
+    fn sym(self) -> Self::Sym;
 }
 
 pub struct RawSymTable<S: SymCoordinate>
@@ -224,15 +227,16 @@ impl SymCoordinate for COSymCoord {
         324
     }
 
-    fn repr(self) -> (usize, Self::Sym) {
-        (
-            (self.0 >> 3) as usize,
-            HalfSymmetry::from_repr((self.0 & 7) as usize),
-        )
-    }
-
     fn from_repr(idx: usize, sym: Self::Sym) -> Self {
         COSymCoord((idx as u16) << 3 | (sym.repr() as u16))
+    }
+
+    fn class(self) -> usize {
+        (self.0 >> 3) as usize
+    }
+
+    fn sym(self) -> Self::Sym {
+        HalfSymmetry::from_repr((self.0 & 7) as usize)
     }
 }
 
@@ -252,15 +256,16 @@ impl SymCoordinate for EOSymCoord {
         336
     }
 
-    fn repr(self) -> (usize, Self::Sym) {
-        (
-            (self.0 >> 3) as usize,
-            HalfSymmetry::from_repr((self.0 & 7) as usize),
-        )
-    }
-
     fn from_repr(idx: usize, sym: Self::Sym) -> Self {
         EOSymCoord((idx as u16) << 3 | (sym.repr() as u16))
+    }
+
+    fn class(self) -> usize {
+        (self.0 >> 3) as usize
+    }
+
+    fn sym(self) -> Self::Sym {
+        HalfSymmetry::from_repr((self.0 & 7) as usize)
     }
 }
 
