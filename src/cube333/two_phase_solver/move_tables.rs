@@ -105,7 +105,7 @@ where
     CubieCube: FromCoordinate<S::Raw>,
 {
     table: Box<[[S; MOVES]]>,
-    sym_mul_table: SymMultTable<S::Sym, SYMS>,
+    sym_mult_table: SymMultTable<S::Sym, SYMS>,
     _phantom: PhantomData<M>,
 }
 
@@ -135,7 +135,7 @@ where
 
         SymMoveTable {
             table,
-            sym_mul_table,
+            sym_mult_table: sym_mul_table,
             _phantom: PhantomData,
         }
     }
@@ -143,7 +143,7 @@ where
     pub fn make_move(&self, coord: S, mv: M) -> S {
         let (idx, sym1) = coord.repr();
         let (idx, sym2) = self.table[idx][mv.index()].repr();
-        let sym = self.sym_mul_table.multiply(sym1, sym2);
+        let sym = self.sym_mult_table.multiply(sym1, sym2);
 
         S::from_repr(idx, sym)
     }
