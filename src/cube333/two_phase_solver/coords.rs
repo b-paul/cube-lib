@@ -43,7 +43,7 @@ impl Coordinate<CubieCube> for ESliceEdgeCoord {
 
         // c is meant to be n choose (k-1) if k >= 1
         let mut k = 0;
-        let mut c = 0;
+        let mut c = 0u16;
 
         for n in 0..12 {
             if puzzle.ep[n as usize].e_slice() {
@@ -58,7 +58,7 @@ impl Coordinate<CubieCube> for ESliceEdgeCoord {
                     // to be n+1 choose k. To do this we can use the identity
                     // n choose k = (n/k) * (n-1 choose k-1)
                     // we have to divide at the end do dodge floor division
-                    debug_assert!((c * (n + 1)) % (k - 1) == 0);
+                    debug_assert!((c * (n + 1)).is_multiple_of(k - 1));
                     c = c * (n + 1) / (k - 1);
                 }
             } else if k > 0 {
@@ -66,7 +66,7 @@ impl Coordinate<CubieCube> for ESliceEdgeCoord {
                 // In this case we want to update n choose k-1 to be n+1 choose k-1. To do this we
                 // can use the identity
                 // (n choose k) = (n/(n-k)) (n-1 choose k)
-                debug_assert!((c * (n + 1)) % (n + 1 - k + 1) == 0);
+                debug_assert!((c * (n + 1)).is_multiple_of(n + 1 - k + 1));
                 c = c * (n + 1) / (n + 1 - k + 1);
             }
         }
