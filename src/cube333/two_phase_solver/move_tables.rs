@@ -332,12 +332,13 @@ mod test {
         mvs: MoveSequence<M>,
     ) where
         CubieCube: FromCoordinate<S::Raw>,
+        S::Raw: std::fmt::Debug,
     {
         let l = table.make_moves(sym_table.puzzle_to_sym(&p), mvs.clone());
         let r = sym_table.puzzle_to_sym(&p.make_moves(MoveSequence(
             mvs.0.into_iter().map(|m| m.into_move()).collect(),
         )));
-        assert_eq!(l, r);
+        assert_eq!(sym_table.sym_to_raw(l), sym_table.sym_to_raw(r));
     }
 
     #[test]
