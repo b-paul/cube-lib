@@ -185,7 +185,12 @@ where
             for sym in S::Sym::get_all() {
                 let d = c.clone().conjugate_symmetry(sym);
                 let raw2 = S::Raw::from_puzzle(&d);
-                raw_to_sym[raw2.repr()] = S::from_repr(sym_idx, sym);
+                // We do not want to overwrite already initialised entries in the raw_to_sym table,
+                // or the default entry. This is to keep duplicate symmetries (which are
+                // "equivalent") into a canonical form based on being first in the symmetry list.
+                if raw2.repr() != 0 && raw_to_sym[raw2.repr()] == S::default() {
+                    raw_to_sym[raw2.repr()] = S::from_repr(sym_idx, sym);
+                }
             }
 
             class_to_repr[sym_idx] = raw;
@@ -208,6 +213,14 @@ where
 
     pub fn puzzle_to_sym(&self, p: &CubieCube) -> S {
         self.raw_to_sym(S::Raw::from_puzzle(p))
+    }
+
+    pub fn sym_to_raw(&self, sym: S) -> S::Raw {
+        let repr = self.index_to_repr(sym.class());
+        let mut c = CubieCube::SOLVED;
+        c.set_coord(repr);
+        let d = c.conjugate_symmetry(sym.sym());
+        S::Raw::from_puzzle(&d)
     }
 }
 
@@ -362,5 +375,22 @@ mod test {
             let eo = EOCoord::from_puzzle(&c);
             assert_eq!(eo_sym.raw_to_sym(eo_sym.index_to_repr(eo_sym.raw_to_sym(eo).class())).class(), eo_sym.raw_to_sym(eo).class());
         })
+    }
+
+    fn raw_to_sym_right_inverse<S: SymCoordinate>()
+    where
+        CubieCube: FromCoordinate<S::Raw>,
+        S::Raw: std::fmt::Debug,
+    {
+        let table = RawSymTable::<S>::generate();
+        for raw in (0..S::Raw::count()).map(S::Raw::from_repr) {
+            assert_eq!(raw, table.sym_to_raw(table.raw_to_sym(raw)));
+        }
+    }
+
+    #[test]
+    fn raw_to_sym_right_inverse_all() {
+        raw_to_sym_right_inverse::<COSymCoord>();
+        raw_to_sym_right_inverse::<EOSymCoord>();
     }
 }
