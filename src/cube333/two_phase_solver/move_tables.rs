@@ -10,7 +10,7 @@ use super::coords::{
     COSymCoord, DominoEPCoord, DominoESliceCoord, EOSymCoord, ESliceEdgeCoord, RawSymTable,
     SymCoordinate,
 };
-use super::symmetry::SymMultTable;
+use super::symmetry::{SymMultTable, SymMoveConjTable};
 
 use std::marker::PhantomData;
 
@@ -106,6 +106,7 @@ where
 {
     table: Box<[[S; MOVES]]>,
     sym_mult_table: SymMultTable<S::Sym, SYMS>,
+    sym_move_conj_table: SymMoveConjTable<S::Sym, M, SYMS, MOVES>,
     _phantom: PhantomData<M>,
 }
 
@@ -131,17 +132,20 @@ where
             })
             .collect::<Vec<_>>()
             .into_boxed_slice();
-        let sym_mul_table = SymMultTable::generate();
+        let sym_mult_table = SymMultTable::generate();
+        let sym_move_conj_table = SymMoveConjTable::generate();
 
         SymMoveTable {
             table,
-            sym_mult_table: sym_mul_table,
+            sym_mult_table,
+            sym_move_conj_table,
             _phantom: PhantomData,
         }
     }
 
     pub fn make_move(&self, coord: S, mv: M) -> S {
         let (idx, sym1) = coord.repr();
+        let mv = self.sym_move_conj_table.conjugate(mv, sym1);
         let (idx, sym2) = self.table[idx][mv.index()].repr();
         let sym = self.sym_mult_table.multiply(sym1, sym2);
 

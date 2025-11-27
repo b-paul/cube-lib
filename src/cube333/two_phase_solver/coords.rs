@@ -185,12 +185,7 @@ where
             for sym in S::Sym::get_all() {
                 let d = c.clone().conjugate_symmetry(sym);
                 let raw2 = S::Raw::from_puzzle(&d);
-                // We do not want to overwrite already initialised entries in the raw_to_sym table,
-                // or the default entry. This is to keep duplicate symmetries (which are
-                // "equivalent") into a canonical form based on being first in the symmetry list.
-                if raw2.repr() != 0 && raw_to_sym[raw2.repr()] == S::default() {
-                    raw_to_sym[raw2.repr()] = S::from_repr(sym_idx, sym);
-                }
+                raw_to_sym[raw2.repr()] = S::from_repr(sym_idx, sym);
             }
 
             class_to_repr[sym_idx] = raw;

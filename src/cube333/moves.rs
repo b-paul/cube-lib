@@ -231,7 +231,6 @@ impl CubieCube {
         let mut result = CubieCube::SOLVED;
 
         for i in 0..8 {
-            // this is kinda confusing but like try it on a cube
             let oa = self.co[other.cp[i] as usize];
             let ob = other.co[i];
             let o = oa.twist_by(ob);

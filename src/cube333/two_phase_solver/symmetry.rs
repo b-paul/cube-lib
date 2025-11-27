@@ -1,6 +1,9 @@
 //! Implements symmetries for the `CubieCube` and symmetry tables for use in move table generation.
 
+use super::move_tables::SubMove;
 use crate::cube333::{Corner as C, CornerTwist as CT, CubieCube, Edge as E, EdgeFlip as EF};
+
+use std::marker::PhantomData;
 
 pub trait Symmetry: Copy + Default + Eq {
     /// A representation of this symmetry as a usize, for use in table lookups.
@@ -21,8 +24,7 @@ pub trait Symmetry: Copy + Default + Eq {
 
     /// Conjugate the given puzzle by this symmetry, written S P S^-1
     fn conjugate(&self, cube: CubieCube) -> CubieCube {
-        self.apply(CubieCube::SOLVED)
-            .multiply_cube(self.apply_inverse(cube))
+        self.apply_inverse(self.apply(CubieCube::SOLVED).multiply_cube(cube))
     }
 }
 
@@ -67,6 +69,44 @@ impl<S: Symmetry, const COUNT: usize> SymMultTable<S, COUNT> {
     /// Multiply two symmetries
     pub fn multiply(&self, a: S, b: S) -> S {
         self.table[a.repr()][b.repr()]
+    }
+}
+
+/// A table of conjugates of moves by symmetries
+pub struct SymMoveConjTable<S: Symmetry, M: SubMove, const SYMS: usize, const MOVES: usize> {
+    table: [[M; MOVES]; SYMS],
+    _phantom: PhantomData<S>,
+}
+
+impl<S: Symmetry, M: SubMove, const SYMS: usize, const MOVES: usize>
+    SymMoveConjTable<S, M, SYMS, MOVES>
+{
+    /// Generate the table
+    pub fn generate() -> Self {
+        use std::array::from_fn;
+
+        let table = from_fn(|s| {
+            from_fn(|m| {
+                let s = S::from_repr(s);
+                let m = M::MOVE_LIST[m];
+
+                let c = s.conjugate(CubieCube::SOLVED.make_move(m.into_move()));
+
+                M::MOVE_LIST
+                    .iter()
+                    .filter_map(|&m2| {
+                        (c.clone().make_move(m2.into_move()) == CubieCube::SOLVED).then_some(m2.inverse())
+                    })
+                    .next()
+                    .expect("Moves should have conjugates in each symmetry")
+            })
+        });
+
+        SymMoveConjTable { table, _phantom: PhantomData }
+    }
+
+    pub fn conjugate(&self, m: M, s: S) -> M {
+        self.table[s.repr()][m.index()]
     }
 }
 
@@ -270,18 +310,36 @@ impl Symmetry for HalfSymmetry {
 mod test {
     use super::*;
 
-    fn check_multiplication_correct<S: Symmetry, const COUNT: usize>() {
+    use crate::cube333::moves::Move333;
+    use crate::moves::MoveSequence;
+
+    use proptest::collection::vec;
+    use proptest::prelude::*;
+
+    fn check_multiplication_correct<S: Symmetry + std::fmt::Debug, const COUNT: usize>() {
         let table = SymMultTable::<S, COUNT>::generate();
-        for sym1 in S::get_all() {
-            for sym2 in S::get_all() {
-                let cube = CubieCube::SOLVED;
-                assert_eq!(
-                    table.multiply(sym1, sym2).apply(cube.clone()),
-                    sym1.apply(cube.clone())
-                        .multiply_cube(sym2.apply(cube.clone()))
-                );
+        proptest!(|(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence))| {
+            let cube = CubieCube::SOLVED.make_moves(mvs);
+            for sym1 in S::get_all() {
+                for sym2 in S::get_all() {
+                    assert_eq!(
+                        table.multiply(sym1, sym2).apply(cube.clone()),
+                        sym2.apply(sym1.apply(cube.clone())),
+                        "{sym1:?} {sym2:?} {:?}", table.multiply(sym1, sym2),
+                    );
+                    assert_eq!(
+                        table.multiply(sym1, sym2).apply_inverse(cube.clone()),
+                        sym1.apply_inverse(sym2.apply_inverse(cube.clone())),
+                        "{sym1:?} {sym2:?} {:?}", table.multiply(sym1, sym2),
+                    );
+                    assert_eq!(
+                        table.multiply(sym1, sym2).conjugate(cube.clone()),
+                        sym1.conjugate(sym2.conjugate(cube.clone())),
+                        "{sym1:?} {sym2:?} {:?}", table.multiply(sym1, sym2),
+                    );
+                }
             }
-        }
+        });
     }
 
     #[test]
