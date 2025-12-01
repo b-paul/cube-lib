@@ -10,7 +10,7 @@ use super::coords::{
     COSymCoord, DominoEPCoord, DominoESliceCoord, EOSymCoord, ESliceEdgeCoord, RawSymTable,
     SymCoordinate,
 };
-use super::symmetry::{SymMultTable, SymMoveConjTable};
+use super::symmetry::{SymMoveConjTable, SymMultTable};
 
 use std::marker::PhantomData;
 
@@ -57,8 +57,8 @@ pub struct MoveTable<M: SubMove, C: Coordinate<CubieCube>, const MOVES: usize> {
 }
 
 impl<M: SubMove, C: Coordinate<CubieCube>, const MOVES: usize> MoveTable<M, C, MOVES> {
-    /// Generate a move table. This is slightly expensive, so making move tables repeatedly should
-    /// be avoided, since the resulting move table generated will be identical anyways.
+    /// Generate a move table. This is slightly expensive so making move tables repeatedly should
+    /// be avoided, since the resulting move table generated will always be identical.
     pub fn generate() -> Self {
         let mut visited = vec![false; C::count()];
         let mut stack = vec![CubieCube::SOLVED];
@@ -100,6 +100,16 @@ impl<M: SubMove, C: Coordinate<CubieCube>, const MOVES: usize> MoveTable<M, C, M
     }
 }
 
+/// A move table working over a symmetry coordinate. See `MoveTable`.
+///
+/// Symmetry move tables only store one coordinate to move mapping per symmetry class, instead of
+/// per coordinate. This makes it more compressed than a normal raw move table. The tradeoff is
+/// that there is a very minor performance hit when computing moves as we need to adjust for
+/// symmetry differences.
+///
+/// In particular, if we have a symmetry coordinate S P S^-1, and we want to apply a move M to it,
+/// notice that S P S^-1 M = S P S^-1 M S S^-1 = S (P S^-1 M S) S^-1. Hence, if we know P M' (where
+/// M' = S^-1 M S) to be S' Q S'^-1, we can compute S P S^-1 M to be S S' Q S'^-1 S^-1.
 pub struct SymMoveTable<M: SubMove, S: SymCoordinate, const MOVES: usize, const SYMS: usize>
 where
     CubieCube: FromCoordinate<S::Raw>,
@@ -115,6 +125,8 @@ impl<M: SubMove, S: SymCoordinate, const MOVES: usize, const SYMS: usize>
 where
     CubieCube: FromCoordinate<S::Raw>,
 {
+    /// Generate a move table. This is slightly expensive so making move tables repeatedly should
+    /// be avoided, since the resulting move table generated will always be identical.
     pub fn generate(sym_table: &RawSymTable<S>) -> Self {
         let table: Box<[[S; MOVES]]> = (0..S::classes())
             .map(|i| {
@@ -143,6 +155,7 @@ where
         }
     }
 
+    /// Determine what coordinate comes from applying a move.
     pub fn make_move(&self, coord: S, mv: M) -> S {
         let (idx, sym1) = coord.repr();
         let mv = self.sym_move_conj_table.conjugate(mv, sym1);
@@ -152,6 +165,7 @@ where
         S::from_repr(idx, sym)
     }
 
+    /// Determine what coordinate comes from applying a sequence of moves.
     fn make_moves(&self, coord: S, alg: MoveSequence<M>) -> S {
         alg.0.into_iter().fold(coord, |c, m| self.make_move(c, m))
     }
