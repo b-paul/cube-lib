@@ -72,7 +72,9 @@ impl<S: Symmetry, const COUNT: usize> SymMultTable<S, COUNT> {
     }
 }
 
-/// A table of conjugates of moves by symmetries
+/// A table of conjugates of moves by symmetries i.e. we identify moves corresponding to S^-1 M S.
+/// We use an inverse conjugate to the usual convention of this repository as it is what is needed
+/// for the symmetry move table.
 pub struct SymMoveConjTable<S: Symmetry, M: SubMove, const SYMS: usize, const MOVES: usize> {
     table: [[M; MOVES]; SYMS],
     _phantom: PhantomData<S>,
@@ -105,6 +107,7 @@ impl<S: Symmetry, M: SubMove, const SYMS: usize, const MOVES: usize>
         SymMoveConjTable { table, _phantom: PhantomData }
     }
 
+    /// Determine the move corresponding to S^-1 M S given M and S.
     pub fn conjugate(&self, m: M, s: S) -> M {
         self.table[s.repr()][m.index()]
     }
