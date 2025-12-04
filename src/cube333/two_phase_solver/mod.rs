@@ -2,4 +2,5 @@
 
 mod coords;
 mod move_tables;
+mod prune;
 mod symmetry;
