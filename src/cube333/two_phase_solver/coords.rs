@@ -88,7 +88,7 @@ impl Coordinate<CubieCube> for ESliceEdgeCoord {
 }
 
 fn binom(n: usize, k: usize) -> usize {
-    (n-k+1..=n).product::<usize>() / (1..=k).product::<usize>()
+    (n - k + 1..=n).product::<usize>() / (1..=k).product::<usize>()
 }
 
 impl FromCoordinate<ESliceEdgeCoord> for CubieCube {
@@ -153,6 +153,27 @@ impl Coordinate<CubieCube> for DominoESliceCoord {
 
     fn from_repr(n: usize) -> Self {
         DominoESliceCoord(n as u16)
+    }
+}
+
+impl FromCoordinate<DominoESliceCoord> for CubieCube {
+    fn set_coord(&mut self, coord: DominoESliceCoord) {
+        self.ep = CubieCube::SOLVED.ep;
+        let mut c = coord.repr();
+
+        let mut n = [0; 4];
+        for (i, n) in n.iter_mut().enumerate() {
+            *n = c % (i + 1);
+            c /= i + 1;
+        }
+
+        use crate::cube333::edge::Edge as E;
+        let mut bag = vec![E::BR, E::BL, E::FL, E::FR];
+        for i in (8..=11).rev() {
+            let index = n[i - 8];
+            self.ep[i] = bag[index];
+            bag.remove(index);
+        }
     }
 }
 
@@ -358,6 +379,7 @@ mod test {
 
     use itertools::Itertools;
 
+    use super::super::move_tables::{DrMove, SubMove};
     use super::*;
     use crate::{
         coord::Coordinate,
@@ -375,6 +397,16 @@ mod test {
             let mut d = CubieCube::SOLVED;
             d.set_coord(coord);
             assert_eq!(ESliceEdgeCoord::from_puzzle(&d), coord);
+        });
+    }
+
+    #[test]
+    fn from_coord_dr() {
+        proptest!(|(mvs in vec(any::<DrMove>(), 0..20).prop_map(|v| v.into_iter().map(SubMove::into_move).collect()).prop_map(MoveSequence))| {
+            let coord = DominoESliceCoord::from_puzzle(&CubieCube::SOLVED.make_moves(mvs));
+            let mut d = CubieCube::SOLVED;
+            d.set_coord(coord);
+            assert_eq!(DominoESliceCoord::from_puzzle(&d), coord);
         });
     }
 
