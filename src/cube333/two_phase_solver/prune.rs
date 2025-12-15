@@ -92,7 +92,7 @@ mod test {
 
     #[test]
     fn conj_generates() {
-        //SliceConjTable::generate();
+        SliceConjTable::generate();
         EoConjTable::generate();
     }
 
@@ -115,8 +115,10 @@ mod test {
 
     #[test]
     fn conj_commutes() {
+        let slice_conj_table = SliceConjTable::generate();
         let eo_conj_table = EoConjTable::generate();
         proptest!(|(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence))| {
+            diagram_commutes(&slice_conj_table, CubieCube::SOLVED.make_moves(mvs.clone()));
             diagram_commutes(&eo_conj_table, CubieCube::SOLVED.make_moves(mvs.clone()));
         });
     }
