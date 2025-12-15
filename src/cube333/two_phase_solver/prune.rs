@@ -2,9 +2,10 @@
 //!
 //! Choices of pruning tables are from cs0x7f's min2phase.
 
-use crate::coord::Coordinate;
-use crate::cube333::CubieCube;
 use super::coords::SymCoordinate;
+use super::symmetry::Symmetry;
+use crate::coord::{Coordinate, FromCoordinate};
+use crate::cube333::CubieCube;
 
 use std::marker::PhantomData;
 
@@ -12,6 +13,50 @@ use std::marker::PhantomData;
 //  look into alternative pruning table choices
 //  look into alternative information to store in pruning tables
 //  look into alternative compression schemes
+
+/// A table storing results of conjugating raw coordinates by symmetries.
+pub struct SymConjTable<
+    S: Symmetry,
+    R: Coordinate<CubieCube>,
+    const SYMS: usize,
+> {
+    table: Box<[[R; SYMS]]>,
+    _phantom1: PhantomData<S>,
+    _phantom2: PhantomData<R>,
+}
+
+impl<S: Symmetry, R: Coordinate<CubieCube>, const SYMS: usize>
+    SymConjTable<S, R, SYMS>
+where
+    CubieCube: FromCoordinate<R>,
+{
+    /// Generate the table
+    pub fn generate() -> Self {
+        let mut table: Box<[[R; SYMS]]> =
+            vec![std::array::from_fn(|_| Default::default()); R::count()].into_boxed_slice();
+        
+        for r1 in (0..R::count()).map(R::from_repr) {
+            let mut c = CubieCube::SOLVED;
+            c.set_coord(r1);
+            for s in S::get_all() {
+                let d = c.clone().conjugate_symmetry(s);
+                let r2 = R::from_puzzle(&d);
+                table[r1.repr()][s.repr()] = r2;
+            }
+        }
+
+        Self {
+            table,
+            _phantom1: PhantomData,
+            _phantom2: PhantomData,
+        }
+    }
+
+    /// Conjugate the given raw coordinate by the given symmetry
+    pub fn conjugate(&self, r: R, s: S) -> R {
+        self.table[r.repr()][s.repr()]
+    }
+}
 
 /// A pruning table indexed by the class of a symmetry coordinate and a raw coordinate.
 ///
@@ -26,13 +71,14 @@ pub struct SymRawPruningTable<S: SymCoordinate, R: Coordinate<CubieCube>, const 
     _phantom2: PhantomData<R>,
 }
 
-impl<S: SymCoordinate, R: Coordinate<CubieCube>, const COUNT: usize> SymRawPruningTable<S, R, COUNT> {
+impl<S: SymCoordinate, R: Coordinate<CubieCube>, const COUNT: usize>
+    SymRawPruningTable<S, R, COUNT>
+{
     pub fn generate() -> Self {
         todo!()
     }
 
     pub fn query(&self, s: S, r: R) -> u8 {
-        // WE NEED CONJUGATE TABLES!!!!!!!!!!!!
         todo!()
     }
 }
