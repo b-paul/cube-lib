@@ -2,7 +2,7 @@
 //!
 //! Choices of pruning tables are from cs0x7f's min2phase.
 
-use super::coords::{ESliceEdgeCoord, SymCoordinate};
+use super::coords::{DominoESliceCoord, ESliceEdgeCoord, SymCoordinate};
 use super::symmetry::{HalfSymmetry, Symmetry};
 use crate::coord::{Coordinate, FromCoordinate};
 use crate::cube333::{CubieCube, coordcube::EOCoord};
@@ -55,6 +55,7 @@ where
 
 type SliceConjTable = SymConjTable<HalfSymmetry, ESliceEdgeCoord, 8>;
 type EoConjTable = SymConjTable<HalfSymmetry, EOCoord, 8>;
+type DominoESliceConjTable = SymConjTable<HalfSymmetry, DominoESliceCoord, 8>;
 
 /// A pruning table indexed by the class of a symmetry coordinate and a raw coordinate.
 ///
@@ -84,6 +85,7 @@ impl<S: SymCoordinate, R: Coordinate<CubieCube>, const COUNT: usize>
 #[cfg(test)]
 mod test {
     use super::*;
+    use super::super::move_tables::{DrMove, SubMove};
     use crate::cube333::moves::Move333;
     use crate::moves::MoveSequence;
 
@@ -117,9 +119,13 @@ mod test {
     fn conj_commutes() {
         let slice_conj_table = SliceConjTable::generate();
         let eo_conj_table = EoConjTable::generate();
+        let domino_eo_conj_table = DominoESliceConjTable::generate();
         proptest!(|(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence))| {
             diagram_commutes(&slice_conj_table, CubieCube::SOLVED.make_moves(mvs.clone()));
             diagram_commutes(&eo_conj_table, CubieCube::SOLVED.make_moves(mvs.clone()));
+        });
+        proptest!(|(mvs in vec(any::<DrMove>(), 0..20).prop_map(|v| v.into_iter().map(SubMove::into_move).collect()).prop_map(MoveSequence))| {
+            diagram_commutes(&domino_eo_conj_table, CubieCube::SOLVED.make_moves(mvs.clone()));
         });
     }
 }
