@@ -87,6 +87,39 @@ impl Coordinate<CubieCube> for ESliceEdgeCoord {
     }
 }
 
+fn binom(n: usize, k: usize) -> usize {
+    (n-k+1..=n).product::<usize>() / (1..=k).product::<usize>()
+}
+
+impl FromCoordinate<ESliceEdgeCoord> for CubieCube {
+    fn set_coord(&mut self, coord: ESliceEdgeCoord) {
+        self.ep = CubieCube::SOLVED.ep;
+        // Identify the locations of each e slice edge.
+        let mut c = coord.repr();
+        let mut poses = [0; 4];
+        let (mut n, mut k) = (11, 3);
+        let mut p = 0;
+        for i in (0..12).rev() {
+            let b = binom(n, k);
+            if b > c {
+                poses[p] = i;
+                p += 1;
+                if k == 0 {
+                    break;
+                }
+                k -= 1;
+            } else {
+                c -= b;
+            }
+            n -= 1;
+        }
+        // swap e slice edges (8..=11 is the e slice edge positions)
+        for (a, b) in poses.into_iter().rev().zip(8..=11) {
+            self.ep.swap(a, b);
+        }
+    }
+}
+
 impl Coordinate<CubieCube> for DominoEPCoord {
     fn from_puzzle(puzzle: &CubieCube) -> Self {
         DominoEPCoord(to_p_coord::<12, 0, 8>(&puzzle.ep.map(|n| n.into())))
@@ -334,6 +367,16 @@ mod test {
 
     use proptest::collection::vec;
     use proptest::prelude::*;
+
+    #[test]
+    fn from_coord() {
+        proptest!(|(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence))| {
+            let coord = ESliceEdgeCoord::from_puzzle(&CubieCube::SOLVED.make_moves(mvs));
+            let mut d = CubieCube::SOLVED;
+            d.set_coord(coord);
+            assert_eq!(ESliceEdgeCoord::from_puzzle(&d), coord);
+        });
+    }
 
     #[test]
     fn e_slice_edge_uniqueness() {
