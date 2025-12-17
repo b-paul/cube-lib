@@ -22,7 +22,7 @@ fn to_p_coord<const COUNT: usize, const LOWER: usize, const UPPER: usize>(
     })
 }
 
-/// Coordinate for positions of E slice edges (ignoring what the edges actually arge)
+/// Coordinate for positions of E slice edges (ignoring what the edges actually are)
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct ESliceEdgeCoord(u16);
 
