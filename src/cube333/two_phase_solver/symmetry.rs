@@ -26,6 +26,11 @@ pub trait Symmetry: Copy + Default + Eq {
     fn conjugate(&self, cube: CubieCube) -> CubieCube {
         self.apply_inverse(self.apply(CubieCube::SOLVED).multiply_cube(cube))
     }
+
+    /// Conjugate the given puzzle by the inverse of this symmetry, written S^-1 P S^
+    fn conjugate_inverse(&self, cube: CubieCube) -> CubieCube {
+        self.apply(self.apply_inverse(CubieCube::SOLVED).multiply_cube(cube))
+    }
 }
 
 impl CubieCube {
@@ -37,6 +42,12 @@ impl CubieCube {
     /// Obtain the cube given by conjugating by some symmetry. We conjugate in the order S C S^-1
     pub(super) fn conjugate_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
         sym.conjugate(self)
+    }
+
+    /// Obtain the cube given by conjugating by the inverse of some symmetry. We hence conjugate in
+    /// the order S^-1 C S
+    pub(super) fn conjugate_inverse_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
+        sym.conjugate_inverse(self)
     }
 }
 
