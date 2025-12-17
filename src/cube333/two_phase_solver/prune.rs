@@ -69,43 +69,53 @@ type DominoESliceConjTable = SymConjTable<HalfSymmetry, DominoESliceCoord, 8>;
 /// though, we can compute the whole pruning depth based on solely the pruning depth modulo 3 if we
 /// know the pruning depth of the current state we are in, when searching.
 pub struct SymRawPruningTable<
+    'a,
     S: SymCoordinate,
     R: Coordinate<CubieCube>,
     M: SubMove,
     const SYMS: usize,
     const MOVES: usize,
-> {
+> where
+    CubieCube: FromCoordinate<R>,
+    CubieCube: FromCoordinate<S::Raw>,
+{
     table: Box<[u8]>,
     conj_table: SymConjTable<S::Sym, R, SYMS>,
-    _phantom1: PhantomData<S>,
-    _phantom2: PhantomData<R>,
-    _phantom3: PhantomData<M>,
+    sym_table: &'a RawSymTable<S>,
+    sym_move_table: &'a SymMoveTable<M, S, MOVES, SYMS>,
+    raw_move_table: &'a MoveTable<M, R, MOVES>,
 }
 
-impl<S: SymCoordinate, R: Coordinate<CubieCube>, M: SubMove, const SYMS: usize, const MOVES: usize>
-    SymRawPruningTable<S, R, M, SYMS, MOVES>
+impl<
+    'a,
+    S: SymCoordinate,
+    R: Coordinate<CubieCube>,
+    M: SubMove,
+    const SYMS: usize,
+    const MOVES: usize,
+> SymRawPruningTable<'a, S, R, M, SYMS, MOVES>
 where
     CubieCube: FromCoordinate<R>,
     CubieCube: FromCoordinate<S::Raw>,
 {
     pub fn generate(
-        sym_table: &RawSymTable<S>,
-        sym_move_table: &SymMoveTable<M, S, MOVES, SYMS>,
-        raw_move_table: &MoveTable<M, R, MOVES>,
+        sym_table: &'a RawSymTable<S>,
+        sym_move_table: &'a SymMoveTable<M, S, MOVES, SYMS>,
+        raw_move_table: &'a MoveTable<M, R, MOVES>,
     ) -> Self {
         let table = vec![0xff; S::classes() * R::count() / 4].into_boxed_slice();
         let conj_table = SymConjTable::generate();
         let mut table = Self {
             table,
             conj_table,
-            _phantom1: PhantomData,
-            _phantom2: PhantomData,
-            _phantom3: PhantomData,
+            sym_table,
+            sym_move_table,
+            raw_move_table,
         };
 
-        let s = sym_table.puzzle_to_sym(&CubieCube::SOLVED);
+        let s = table.sym_table.puzzle_to_sym(&CubieCube::SOLVED);
         let r = R::from_puzzle(&CubieCube::SOLVED);
-        table.set(s, r, 0, sym_table);
+        table.set(s, r, 0);
         let mut stack = vec![(s, r)];
         let mut next = vec![];
         let mut depth = 1;
@@ -113,11 +123,11 @@ where
         while !stack.is_empty() {
             while let Some((s, r)) = stack.pop() {
                 for &m in M::MOVE_LIST {
-                    let s2 = sym_move_table.make_move(s, m);
-                    let r2 = raw_move_table.make_move(r, m);
+                    let s2 = table.sym_move_table.make_move(s, m);
+                    let r2 = table.raw_move_table.make_move(r, m);
                     if table.query(s2, r2) == 3 {
                         next.push((s2, r2));
-                        table.set(s2, r2, depth % 3, sym_table);
+                        table.set(s2, r2, depth % 3);
                     }
                 }
             }
@@ -137,7 +147,7 @@ where
     }
 
     /// Set the depth in the search tree of this coordinate pair modulo 3.
-    fn set(&mut self, s: S, r: R, val: u8, sym_table: &RawSymTable<S>) {
+    fn set(&mut self, s: S, r: R, val: u8) {
         assert!(val & !3 == 0);
 
         // Some S::Raw coordinates can be represented in multiple ways by S (there can be multiple
@@ -148,16 +158,22 @@ where
         // the symmetry) S^-1 r S, and so we must iterate over all symmetries and find the
         // duplicates we need to update.
 
-        /* i'll do it later
+        // this is extremely inefficient! It would be very beneficial to create some sort of
+        // temporary table which stored masks of equivalent symmetries (from min2phase)!
+        let class_repr = S::from_repr(s.class(), S::Sym::from_repr(0));
+        let mut base_cube = CubieCube::SOLVED;
+        base_cube.set_coord(self.sym_table.sym_to_raw(class_repr));
+        let mut s_cube = CubieCube::SOLVED;
+        s_cube.set_coord(self.sym_table.sym_to_raw(s));
         for sym in S::Sym::get_all() {
-            todo!()
+            if base_cube.clone().conjugate_inverse_symmetry(sym) == s_cube {
+                let s2 = S::from_repr(s.class(), sym);
+                let (index, shift) = self.index(s2, r);
+
+                self.table[index] &= !(3 << shift);
+                self.table[index] |= val << shift;
+            }
         }
-        */
-
-        let (index, shift) = self.index(s, r);
-
-        self.table[index] &= !(3 << shift);
-        self.table[index] |= val << shift;
     }
 
     pub fn query(&self, s: S, r: R) -> u8 {
@@ -165,10 +181,37 @@ where
 
         (self.table[index] >> shift) & 3
     }
+
+    pub fn bound(&self, mut s: S, mut r: R) -> usize {
+        let mut bound = 0;
+        let solved = (
+            self.sym_table.puzzle_to_sym(&CubieCube::SOLVED).class(),
+            R::from_puzzle(&CubieCube::SOLVED),
+        );
+        while (s.class(), r) != solved {
+            let n = self.query(s, r);
+            // n - 1 but underflow
+            let goal = (n + 2).rem_euclid(3);
+            (s, r) = M::MOVE_LIST
+                .iter()
+                .map(|&m| {
+                    (
+                        self.sym_move_table.make_move(s, m),
+                        self.raw_move_table.make_move(r, m),
+                    )
+                })
+                .find(|&(s, r)| self.query(s, r) == goal)
+                .unwrap();
+
+            bound += 1;
+        }
+        bound
+    }
 }
 
-type ESliceTwistPruneTable = SymRawPruningTable<COSymCoord, ESliceEdgeCoord, Move333, 8, 18>;
-type ESliceFlipPruneTable = SymRawPruningTable<EOSymCoord, ESliceEdgeCoord, Move333, 8, 18>;
+type ESliceTwistPruneTable<'a> =
+    SymRawPruningTable<'a, COSymCoord, ESliceEdgeCoord, Move333, 8, 18>;
+type ESliceFlipPruneTable<'a> = SymRawPruningTable<'a, EOSymCoord, ESliceEdgeCoord, Move333, 8, 18>;
 
 #[cfg(test)]
 mod test {
@@ -221,5 +264,43 @@ mod test {
 
         ESliceTwistPruneTable::generate(&co_sym_table, &co_sym_move_table, &e_slice_move_table);
         ESliceFlipPruneTable::generate(&eo_sym_table, &eo_sym_move_table, &e_slice_move_table);
+    }
+
+    fn admissable<
+        'a,
+        S: SymCoordinate,
+        R: Coordinate<CubieCube>,
+        M: SubMove,
+        const SYMS: usize,
+        const MOVES: usize,
+    >(
+        prune_table: &SymRawPruningTable<'a, S, R, M, SYMS, MOVES>,
+        mvs: MoveSequence<M>,
+    ) where
+        CubieCube: FromCoordinate<R>,
+        CubieCube: FromCoordinate<S::Raw>,
+    {
+        let s = prune_table.sym_table.puzzle_to_sym(&CubieCube::SOLVED);
+        let s = prune_table.sym_move_table.make_moves(s, mvs.clone());
+        let r = R::from_puzzle(&CubieCube::SOLVED);
+        let r = prune_table.raw_move_table.make_moves(r, mvs.clone());
+        assert!(prune_table.bound(s, r) <= mvs.len());
+    }
+
+    #[test]
+    fn check_admissable() {
+        let co_sym_table = RawSymTable::generate();
+        let co_sym_move_table = SymMoveTable::generate(&co_sym_table);
+        let eo_sym_table = RawSymTable::generate();
+        let eo_sym_move_table = SymMoveTable::generate(&eo_sym_table);
+        let e_slice_move_table = MoveTable::generate();
+        let c_prune =
+            ESliceTwistPruneTable::generate(&co_sym_table, &co_sym_move_table, &e_slice_move_table);
+        let e_prune =
+            ESliceFlipPruneTable::generate(&eo_sym_table, &eo_sym_move_table, &e_slice_move_table);
+        proptest!(|(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence))| {
+            admissable(&c_prune, mvs.clone());
+            admissable(&e_prune, mvs.clone());
+        });
     }
 }
