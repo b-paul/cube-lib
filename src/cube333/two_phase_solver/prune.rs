@@ -14,7 +14,8 @@ use std::marker::PhantomData;
 //  look into alternative information to store in pruning tables
 //  look into alternative compression schemes
 
-/// A table storing results of conjugating raw coordinates by symmetries.
+/// A table storing results of conjugating raw coordinates by inverses of symmetries (i.e. we
+/// compute S^-1 R S given R and S).
 pub struct SymConjTable<S: Symmetry, R: Coordinate<CubieCube>, const SYMS: usize> {
     table: Box<[[R; SYMS]]>,
     _phantom1: PhantomData<S>,
@@ -34,7 +35,7 @@ where
             let mut c = CubieCube::SOLVED;
             c.set_coord(r1);
             for s in S::get_all() {
-                let d = c.clone().conjugate_symmetry(s);
+                let d = c.clone().conjugate_inverse_symmetry(s);
                 let r2 = R::from_puzzle(&d);
                 table[r1.repr()][s.repr()] = r2;
             }
@@ -47,7 +48,7 @@ where
         }
     }
 
-    /// Conjugate the given raw coordinate by the given symmetry
+    /// Conjugate the given raw coordinate by the given symmetry's inverse (S^-1 R S).
     pub fn conjugate(&self, r: R, s: S) -> R {
         self.table[r.repr()][s.repr()]
     }
@@ -92,12 +93,6 @@ mod test {
     use proptest::collection::vec;
     use proptest::prelude::*;
 
-    #[test]
-    fn conj_generates() {
-        SliceConjTable::generate();
-        EoConjTable::generate();
-    }
-
     fn diagram_commutes<
         S: Symmetry,
         R: Coordinate<CubieCube> + std::fmt::Debug,
@@ -110,7 +105,7 @@ mod test {
     {
         for s in S::get_all() {
             let a = table.conjugate(R::from_puzzle(&cube), s);
-            let b = R::from_puzzle(&cube.clone().conjugate_symmetry(s));
+            let b = R::from_puzzle(&cube.clone().conjugate_inverse_symmetry(s));
             assert_eq!(a, b);
         }
     }
