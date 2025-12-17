@@ -95,7 +95,7 @@ impl<M: SubMove, C: Coordinate<CubieCube>, const MOVES: usize> MoveTable<M, C, M
     }
 
     /// Determine what coordinate comes from applying a sequence of moves.
-    fn make_moves(&self, coord: C, alg: MoveSequence<M>) -> C {
+    pub fn make_moves(&self, coord: C, alg: MoveSequence<M>) -> C {
         alg.0.into_iter().fold(coord, |c, m| self.make_move(c, m))
     }
 }
@@ -166,7 +166,7 @@ where
     }
 
     /// Determine what coordinate comes from applying a sequence of moves.
-    fn make_moves(&self, coord: S, alg: MoveSequence<M>) -> S {
+    pub fn make_moves(&self, coord: S, alg: MoveSequence<M>) -> S {
         alg.0.into_iter().fold(coord, |c, m| self.make_move(c, m))
     }
 }
