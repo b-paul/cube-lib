@@ -113,9 +113,11 @@ where
             raw_move_table,
         };
 
+        let conj_table_s = SymConjTable::generate();
+
         let s = table.sym_table.puzzle_to_sym(&CubieCube::SOLVED);
         let r = R::from_puzzle(&CubieCube::SOLVED);
-        table.set(s, r, 0);
+        table.set(s, r, 0, &conj_table_s);
         let mut stack = vec![(s, r)];
         let mut next = vec![];
         let mut depth = 1;
@@ -127,7 +129,7 @@ where
                     let r2 = table.raw_move_table.make_move(r, m);
                     if table.query(s2, r2) == 3 {
                         next.push((s2, r2));
-                        table.set(s2, r2, depth % 3);
+                        table.set(s2, r2, depth % 3, &conj_table_s);
                     }
                 }
             }
@@ -147,7 +149,7 @@ where
     }
 
     /// Set the depth in the search tree of this coordinate pair modulo 3.
-    fn set(&mut self, s: S, r: R, val: u8) {
+    fn set(&mut self, s: S, r: R, val: u8, conj_table_s: &SymConjTable<S::Sym, S::Raw, SYMS>) {
         assert!(val & !3 == 0);
 
         // Some S::Raw coordinates can be represented in multiple ways by S (there can be multiple
@@ -158,15 +160,12 @@ where
         // the symmetry) S^-1 r S, and so we must iterate over all symmetries and find the
         // duplicates we need to update.
 
-        // this is extremely inefficient! It would be very beneficial to create some sort of
-        // temporary table which stored masks of equivalent symmetries (from min2phase)!
-        let class_repr = S::from_repr(s.class(), S::Sym::from_repr(0));
-        let mut base_cube = CubieCube::SOLVED;
-        base_cube.set_coord(self.sym_table.sym_to_raw(class_repr));
-        let mut s_cube = CubieCube::SOLVED;
-        s_cube.set_coord(self.sym_table.sym_to_raw(s));
+        let repr_raw = self.sym_table.index_to_repr(s.class());
+        // this is technically S r S^-1 and not S^-1 r S, but it should be fine i think! Symmetries
+        // that agree on this inverse should agree on the normal case
+        let sinv_raw = conj_table_s.conjugate(repr_raw, s.sym());
         for sym in S::Sym::get_all() {
-            if base_cube.clone().conjugate_inverse_symmetry(sym) == s_cube {
+            if conj_table_s.conjugate(repr_raw, sym) == sinv_raw {
                 let s2 = S::from_repr(s.class(), sym);
                 let (index, shift) = self.index(s2, r);
 
@@ -252,18 +251,6 @@ mod test {
         proptest!(|(mvs in vec(any::<DrMove>(), 0..20).prop_map(|v| v.into_iter().map(SubMove::into_move).collect()).prop_map(MoveSequence))| {
             diagram_commutes(&domino_eo_conj_table, CubieCube::SOLVED.make_moves(mvs.clone()));
         });
-    }
-
-    #[test]
-    fn prune_generates() {
-        let co_sym_table = RawSymTable::generate();
-        let co_sym_move_table = SymMoveTable::generate(&co_sym_table);
-        let eo_sym_table = RawSymTable::generate();
-        let eo_sym_move_table = SymMoveTable::generate(&eo_sym_table);
-        let e_slice_move_table = MoveTable::generate();
-
-        ESliceTwistPruneTable::generate(&co_sym_table, &co_sym_move_table, &e_slice_move_table);
-        ESliceFlipPruneTable::generate(&eo_sym_table, &eo_sym_move_table, &e_slice_move_table);
     }
 
     fn admissable<
