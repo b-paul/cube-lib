@@ -98,6 +98,7 @@ where
     CubieCube: FromCoordinate<R>,
     CubieCube: FromCoordinate<S::Raw>,
 {
+    /// Generate the table
     pub fn generate(
         sym_table: &'a RawSymTable<S>,
         sym_move_table: &'a SymMoveTable<M, S, MOVES, SYMS>,
@@ -142,6 +143,7 @@ where
         table
     }
 
+    /// Compute the index and shift into the table given a coordinate pair.
     fn index(&self, s: S, r: R) -> (usize, usize) {
         let r2 = self.conj_table.conjugate(r, s.sym());
         let i = r2.repr() * S::classes() + s.class();
@@ -175,12 +177,14 @@ where
         }
     }
 
+    /// Determine the bound of a coordinate pair modulo 3 with a lookup (fast)
     pub fn query(&self, s: S, r: R) -> u8 {
         let (index, shift) = self.index(s, r);
 
         (self.table[index] >> shift) & 3
     }
 
+    /// Compute the bound on a given coordinate pair (slow)
     pub fn bound(&self, mut s: S, mut r: R) -> usize {
         let mut bound = 0;
         let solved = (
