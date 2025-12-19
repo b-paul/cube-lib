@@ -17,6 +17,26 @@ pub struct EOCoord(u16);
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct EPCoord(u32);
 
+// TODO AHHHH
+// this is copied from the two phase solver!!! so messy!!! AHHHH
+fn set_p_coord<const COUNT: usize, const LOWER: usize, const UPPER: usize, P: Copy>(
+    mut c: usize,
+    perm: &mut [P; COUNT],
+    mut bag: Vec<P>,
+) {
+    let mut n = [0; COUNT];
+    for (i, n) in n.iter_mut().enumerate() {
+        *n = c % (i + 1);
+        c /= i + 1;
+    }
+
+    for i in (LOWER..=UPPER).rev() {
+        let index = n[i - LOWER];
+        perm[i] = bag[index];
+        bag.remove(index);
+    }
+}
+
 impl Coordinate<CubieCube> for COCoord {
     fn from_puzzle(puzzle: &CubieCube) -> Self {
         COCoord(to_o_coord::<8, 3>(&puzzle.co.map(|n| n.into())))
@@ -79,6 +99,16 @@ impl Coordinate<CubieCube> for CPCoord {
     }
 }
 
+impl FromCoordinate<CPCoord> for CubieCube {
+    fn set_coord(&mut self, coord: CPCoord) {
+        use crate::cube333::corner::Corner as C;
+        #[rustfmt::skip]
+        let bag = vec![C::DBR, C::DBL, C::DFL, C::DFR, C::UBR, C::UBL, C::UFL, C::UFR];
+
+        set_p_coord::<8, 0, 7, C>(coord.repr(), &mut self.cp, bag);
+    }
+}
+
 impl Coordinate<CubieCube> for EOCoord {
     fn from_puzzle(puzzle: &CubieCube) -> Self {
         EOCoord(to_o_coord::<12, 2>(&puzzle.eo.map(|n| n.into())))
@@ -135,6 +165,16 @@ impl Coordinate<CubieCube> for EPCoord {
 
     fn from_repr(n: usize) -> Self {
         EPCoord(n as u32)
+    }
+}
+
+impl FromCoordinate<EPCoord> for CubieCube {
+    fn set_coord(&mut self, coord: EPCoord) {
+        use crate::cube333::edge::Edge as E;
+        #[rustfmt::skip]
+        let bag = vec![E::BR, E::BL, E::FL, E::FR, E::DR, E::DB, E::DL, E::DF, E::UR, E::UB, E::UL, E::UF];
+
+        set_p_coord::<12, 0, 11, E>(coord.repr(), &mut self.ep, bag);
     }
 }
 

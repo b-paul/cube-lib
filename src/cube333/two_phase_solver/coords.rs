@@ -22,6 +22,24 @@ fn to_p_coord<const COUNT: usize, const LOWER: usize, const UPPER: usize>(
     })
 }
 
+fn set_p_coord<const COUNT: usize, const LOWER: usize, const UPPER: usize, P: Copy>(
+    mut c: usize,
+    perm: &mut [P; COUNT],
+    mut bag: Vec<P>,
+) {
+    let mut n = [0; COUNT];
+    for (i, n) in n.iter_mut().enumerate() {
+        *n = c % (i + 1);
+        c /= i + 1;
+    }
+
+    for i in (LOWER..=UPPER).rev() {
+        let index = n[i - LOWER];
+        perm[i] = bag[index];
+        bag.remove(index);
+    }
+}
+
 /// Coordinate for positions of E slice edges (ignoring what the edges actually are)
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct ESliceEdgeCoord(u16);
@@ -138,6 +156,18 @@ impl Coordinate<CubieCube> for DominoEPCoord {
     }
 }
 
+impl FromCoordinate<DominoEPCoord> for CubieCube {
+    fn set_coord(&mut self, coord: DominoEPCoord) {
+        // UHHH i hope this is fine...
+        // self.ep = CubieCube::SOLVED.ep;
+
+        use crate::cube333::edge::Edge as E;
+        let bag = vec![E::DR, E::DB, E::DL, E::DF, E::UR, E::UB, E::UL, E::UF];
+
+        set_p_coord::<12, 0, 7, E>(coord.repr(), &mut self.ep, bag);
+    }
+}
+
 impl Coordinate<CubieCube> for DominoESliceCoord {
     fn from_puzzle(puzzle: &CubieCube) -> Self {
         DominoESliceCoord(to_p_coord::<12, 8, 12>(&puzzle.ep.map(|n| n.into())))
@@ -158,22 +188,12 @@ impl Coordinate<CubieCube> for DominoESliceCoord {
 
 impl FromCoordinate<DominoESliceCoord> for CubieCube {
     fn set_coord(&mut self, coord: DominoESliceCoord) {
-        self.ep = CubieCube::SOLVED.ep;
-        let mut c = coord.repr();
-
-        let mut n = [0; 4];
-        for (i, n) in n.iter_mut().enumerate() {
-            *n = c % (i + 1);
-            c /= i + 1;
-        }
+        //self.ep = CubieCube::SOLVED.ep;
 
         use crate::cube333::edge::Edge as E;
-        let mut bag = vec![E::BR, E::BL, E::FL, E::FR];
-        for i in (8..=11).rev() {
-            let index = n[i - 8];
-            self.ep[i] = bag[index];
-            bag.remove(index);
-        }
+        let bag = vec![E::BR, E::BL, E::FL, E::FR];
+
+        set_p_coord::<12, 8, 11, E>(coord.repr(), &mut self.ep, bag);
     }
 }
 
@@ -331,6 +351,64 @@ impl SymCoordinate for EOSymCoord {
     }
 }
 
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
+pub struct CPSymCoord(u16);
+
+impl SymCoordinate for CPSymCoord {
+    type Sym = DrSymmetry;
+
+    type Raw = CPCoord;
+
+    fn count() -> usize {
+        Self::classes() * 16
+    }
+
+    fn classes() -> usize {
+        2768
+    }
+
+    fn from_repr(idx: usize, sym: Self::Sym) -> Self {
+        CPSymCoord((idx as u16) << 4 | (sym.repr() as u16))
+    }
+
+    fn class(self) -> usize {
+        (self.0 >> 4) as usize
+    }
+
+    fn sym(self) -> Self::Sym {
+        DrSymmetry::from_repr((self.0 & 15) as usize)
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
+pub struct DominoEPSymCoord(u16);
+
+impl SymCoordinate for DominoEPSymCoord {
+    type Sym = DrSymmetry;
+
+    type Raw = DominoEPCoord;
+
+    fn count() -> usize {
+        Self::classes() * 16
+    }
+
+    fn classes() -> usize {
+        2768
+    }
+
+    fn from_repr(idx: usize, sym: Self::Sym) -> Self {
+        DominoEPSymCoord((idx as u16) << 4 | (sym.repr() as u16))
+    }
+
+    fn class(self) -> usize {
+        (self.0 >> 4) as usize
+    }
+
+    fn sym(self) -> Self::Sym {
+        DrSymmetry::from_repr((self.0 & 15) as usize)
+    }
+}
+
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
 pub struct Phase1Cube {
     co: COCoord,
@@ -390,23 +468,28 @@ mod test {
     use proptest::collection::vec;
     use proptest::prelude::*;
 
+    fn sets_coord<C: Coordinate<CubieCube> + std::fmt::Debug>(mvs: MoveSequence<Move333>)
+    where
+        CubieCube: FromCoordinate<C>,
+    {
+        let coord = C::from_puzzle(&CubieCube::SOLVED.make_moves(mvs));
+        let mut d = CubieCube::SOLVED;
+        d.set_coord(coord);
+        assert_eq!(C::from_puzzle(&d), coord);
+    }
+
     #[test]
     fn from_coord() {
         proptest!(|(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence))| {
-            let coord = ESliceEdgeCoord::from_puzzle(&CubieCube::SOLVED.make_moves(mvs));
-            let mut d = CubieCube::SOLVED;
-            d.set_coord(coord);
-            assert_eq!(ESliceEdgeCoord::from_puzzle(&d), coord);
+            sets_coord::<ESliceEdgeCoord>(mvs);
         });
     }
 
     #[test]
     fn from_coord_dr() {
         proptest!(|(mvs in vec(any::<DrMove>(), 0..20).prop_map(|v| v.into_iter().map(SubMove::into_move).collect()).prop_map(MoveSequence))| {
-            let coord = DominoESliceCoord::from_puzzle(&CubieCube::SOLVED.make_moves(mvs));
-            let mut d = CubieCube::SOLVED;
-            d.set_coord(coord);
-            assert_eq!(DominoESliceCoord::from_puzzle(&d), coord);
+            sets_coord::<DominoESliceCoord>(mvs.clone());
+            sets_coord::<DominoEPCoord>(mvs);
         });
     }
 
@@ -432,6 +515,8 @@ mod test {
     fn sym_table_generates() {
         RawSymTable::<COSymCoord>::generate();
         RawSymTable::<EOSymCoord>::generate();
+        RawSymTable::<CPSymCoord>::generate();
+        RawSymTable::<DominoEPSymCoord>::generate();
     }
 
     #[test]
@@ -444,7 +529,16 @@ mod test {
             assert_eq!(co_sym.raw_to_sym(co_sym.index_to_repr(co_sym.raw_to_sym(co).class())).class(), co_sym.raw_to_sym(co).class());
             let eo = EOCoord::from_puzzle(&c);
             assert_eq!(eo_sym.raw_to_sym(eo_sym.index_to_repr(eo_sym.raw_to_sym(eo).class())).class(), eo_sym.raw_to_sym(eo).class());
-        })
+        });
+        let cp_sym = RawSymTable::<CPSymCoord>::generate();
+        let ep_sym = RawSymTable::<DominoEPSymCoord>::generate();
+        proptest!(|(mvs in vec(any::<DrMove>(), 0..20).prop_map(|v| v.into_iter().map(SubMove::into_move).collect()).prop_map(MoveSequence))| {
+            let c = CubieCube::SOLVED.make_moves(mvs);
+            let cp = CPCoord::from_puzzle(&c);
+            assert_eq!(cp_sym.raw_to_sym(cp_sym.index_to_repr(cp_sym.raw_to_sym(cp).class())).class(), cp_sym.raw_to_sym(cp).class());
+            let ep = DominoEPCoord::from_puzzle(&c);
+            assert_eq!(ep_sym.raw_to_sym(ep_sym.index_to_repr(ep_sym.raw_to_sym(ep).class())).class(), ep_sym.raw_to_sym(ep).class());
+        });
     }
 
     fn raw_to_sym_right_inverse<S: SymCoordinate>()
@@ -462,5 +556,7 @@ mod test {
     fn raw_to_sym_right_inverse_all() {
         raw_to_sym_right_inverse::<COSymCoord>();
         raw_to_sym_right_inverse::<EOSymCoord>();
+        raw_to_sym_right_inverse::<CPSymCoord>();
+        raw_to_sym_right_inverse::<DominoEPSymCoord>();
     }
 }

@@ -3,9 +3,10 @@
 //! Choices of pruning tables are from cs0x7f's min2phase.
 
 use super::coords::{
-    COSymCoord, DominoESliceCoord, EOSymCoord, ESliceEdgeCoord, RawSymTable, SymCoordinate,
+    COSymCoord, CPSymCoord, DominoEPSymCoord, DominoESliceCoord, EOSymCoord, ESliceEdgeCoord,
+    RawSymTable, SymCoordinate,
 };
-use super::move_tables::{MoveTable, SubMove, SymMoveTable};
+use super::move_tables::{DrMove, MoveTable, SubMove, SymMoveTable};
 use super::symmetry::{HalfSymmetry, Symmetry};
 use crate::coord::{Coordinate, FromCoordinate};
 use crate::cube333::{CubieCube, coordcube::EOCoord, moves::Move333};
@@ -17,10 +18,10 @@ use std::marker::PhantomData;
 //  look into alternative information to store in pruning tables
 //  look into alternative compression schemes
 
-/// A table storing results of conjugating raw coordinates by inverses of symmetries (i.e. we
-/// compute S^-1 R S given R and S).
+/// A table storing results of conjugating raw coordinates by symmetries or inverses of symmetries.
 pub struct SymConjTable<S: Symmetry, R: Coordinate<CubieCube>, const SYMS: usize> {
     table: Box<[[R; SYMS]]>,
+    inv_table: Box<[[R; SYMS]]>,
     _phantom1: PhantomData<S>,
     _phantom2: PhantomData<R>,
 }
@@ -33,27 +34,38 @@ where
     pub fn generate() -> Self {
         let mut table: Box<[[R; SYMS]]> =
             vec![std::array::from_fn(|_| Default::default()); R::count()].into_boxed_slice();
+        let mut inv_table: Box<[[R; SYMS]]> =
+            vec![std::array::from_fn(|_| Default::default()); R::count()].into_boxed_slice();
 
         for r1 in (0..R::count()).map(R::from_repr) {
             let mut c = CubieCube::SOLVED;
             c.set_coord(r1);
             for s in S::get_all() {
-                let d = c.clone().conjugate_inverse_symmetry(s);
+                let d = c.clone().conjugate_symmetry(s);
                 let r2 = R::from_puzzle(&d);
                 table[r1.repr()][s.repr()] = r2;
+                let d = c.clone().conjugate_inverse_symmetry(s);
+                let r2 = R::from_puzzle(&d);
+                inv_table[r1.repr()][s.repr()] = r2;
             }
         }
 
         Self {
             table,
+            inv_table,
             _phantom1: PhantomData,
             _phantom2: PhantomData,
         }
     }
 
-    /// Conjugate the given raw coordinate by the given symmetry's inverse (S^-1 R S).
+    /// Conjugate the given raw coordinate by the given symmetry (S R S^-1).
     pub fn conjugate(&self, r: R, s: S) -> R {
         self.table[r.repr()][s.repr()]
+    }
+
+    /// Conjugate the given raw coordinate by the given symmetry's inverse (S^-1 R S).
+    pub fn conjugate_inverse(&self, r: R, s: S) -> R {
+        self.inv_table[r.repr()][s.repr()]
     }
 }
 
@@ -145,7 +157,7 @@ where
 
     /// Compute the index and shift into the table given a coordinate pair.
     fn index(&self, s: S, r: R) -> (usize, usize) {
-        let r2 = self.conj_table.conjugate(r, s.sym());
+        let r2 = self.conj_table.conjugate_inverse(r, s.sym());
         let i = r2.repr() * S::classes() + s.class();
         (i >> 2, (i & 3) * 2)
     }
@@ -163,8 +175,6 @@ where
         // duplicates we need to update.
 
         let repr_raw = self.sym_table.index_to_repr(s.class());
-        // this is technically S r S^-1 and not S^-1 r S, but it should be fine i think! Symmetries
-        // that agree on this inverse should agree on the normal case
         let sinv_raw = conj_table_s.conjugate(repr_raw, s.sym());
         for sym in S::Sym::get_all() {
             if conj_table_s.conjugate(repr_raw, sym) == sinv_raw {
@@ -215,6 +225,10 @@ where
 type ESliceTwistPruneTable<'a> =
     SymRawPruningTable<'a, COSymCoord, ESliceEdgeCoord, Move333, 8, 18>;
 type ESliceFlipPruneTable<'a> = SymRawPruningTable<'a, EOSymCoord, ESliceEdgeCoord, Move333, 8, 18>;
+type DominoSliceCPPruneTable<'a> =
+    SymRawPruningTable<'a, CPSymCoord, DominoESliceCoord, DrMove, 16, 10>;
+type DominoSliceEPPruneTable<'a> =
+    SymRawPruningTable<'a, DominoEPSymCoord, DominoESliceCoord, DrMove, 16, 10>;
 
 #[cfg(test)]
 mod test {
@@ -292,6 +306,25 @@ mod test {
         proptest!(|(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence))| {
             admissable(&c_prune, mvs.clone());
             admissable(&e_prune, mvs.clone());
+        });
+        let cp_sym_table = RawSymTable::generate();
+        let cp_sym_move_table = SymMoveTable::generate(&cp_sym_table);
+        let ep_sym_table = RawSymTable::generate();
+        let ep_sym_move_table = SymMoveTable::generate(&ep_sym_table);
+        let d_e_slice_move_table = MoveTable::generate();
+        let d_c_prune = DominoSliceCPPruneTable::generate(
+            &cp_sym_table,
+            &cp_sym_move_table,
+            &d_e_slice_move_table,
+        );
+        let d_e_prune = DominoSliceEPPruneTable::generate(
+            &ep_sym_table,
+            &ep_sym_move_table,
+            &d_e_slice_move_table,
+        );
+        proptest!(|(mvs in vec(any::<DrMove>(), 0..20).prop_map(MoveSequence))| {
+            admissable(&d_c_prune, mvs.clone());
+            admissable(&d_e_prune, mvs.clone());
         });
     }
 }
