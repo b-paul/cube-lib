@@ -103,19 +103,23 @@ impl<S: Symmetry, M: SubMove, const SYMS: usize, const MOVES: usize>
                 let s = S::from_repr(s);
                 let m = M::MOVE_LIST[m];
 
-                let c = s.conjugate(CubieCube::SOLVED.make_move(m.into_move()));
+                let c = s.conjugate_inverse(CubieCube::SOLVED.make_move(m.into_move()));
 
                 M::MOVE_LIST
                     .iter()
                     .filter_map(|&m2| {
-                        (c.clone().make_move(m2.into_move()) == CubieCube::SOLVED).then_some(m2.inverse())
+                        (c.clone().make_move(m2.into_move()) == CubieCube::SOLVED)
+                            .then_some(m2.inverse())
                     })
                     .next()
                     .expect("Moves should have conjugates in each symmetry")
             })
         });
 
-        SymMoveConjTable { table, _phantom: PhantomData }
+        SymMoveConjTable {
+            table,
+            _phantom: PhantomData,
+        }
     }
 
     /// Determine the move corresponding to S^-1 M S given M and S.

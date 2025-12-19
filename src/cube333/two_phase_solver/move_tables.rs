@@ -2,13 +2,13 @@
 
 use crate::coord::{Coordinate, FromCoordinate};
 use crate::cube333::CubieCube;
-use crate::cube333::coordcube::{COCoord, CPCoord, EOCoord};
+use crate::cube333::coordcube::{COCoord, EOCoord};
 use crate::cube333::moves::{Move333, Move333Type};
 use crate::moves::{Cancellation, Move, MoveSequence};
 
 use super::coords::{
-    COSymCoord, DominoEPCoord, DominoESliceCoord, EOSymCoord, ESliceEdgeCoord, RawSymTable,
-    SymCoordinate,
+    COSymCoord, CPSymCoord, DominoEPSymCoord, DominoESliceCoord, EOSymCoord, ESliceEdgeCoord,
+    RawSymTable, SymCoordinate,
 };
 use super::symmetry::{SymMoveConjTable, SymMultTable};
 
@@ -282,13 +282,11 @@ impl SubMove for DrMove {
     }
 }
 
-type COMoveTable = MoveTable<Move333, COCoord, 18>;
-type EOMoveTable = MoveTable<Move333, EOCoord, 18>;
 type COSymMoveTable = SymMoveTable<Move333, COSymCoord, 18, 8>;
 type EOSymMoveTable = SymMoveTable<Move333, EOSymCoord, 18, 8>;
 type ESliceEdgeMoveTable = MoveTable<Move333, ESliceEdgeCoord, 18>;
-type DominoCPMoveTable = MoveTable<DrMove, CPCoord, 10>;
-type DominoEPMoveTable = MoveTable<DrMove, DominoEPCoord, 10>;
+type DominoCPSymMoveTable = SymMoveTable<DrMove, CPSymCoord, 10, 16>;
+type DominoEPSymMoveTable = SymMoveTable<DrMove, DominoEPSymCoord, 10, 16>;
 type DominoESliceMoveTable = MoveTable<DrMove, DominoESliceCoord, 10>;
 
 #[cfg(test)]
@@ -300,12 +298,12 @@ mod test {
 
     #[test]
     fn generates() {
-        COMoveTable::generate();
-        EOMoveTable::generate();
         ESliceEdgeMoveTable::generate();
-        DominoCPMoveTable::generate();
-        DominoEPMoveTable::generate();
         DominoESliceMoveTable::generate();
+        COSymMoveTable::generate(&RawSymTable::generate());
+        EOSymMoveTable::generate(&RawSymTable::generate());
+        DominoCPSymMoveTable::generate(&RawSymTable::generate());
+        DominoEPSymMoveTable::generate(&RawSymTable::generate());
     }
 
     /* We check that the following diagram commutes
@@ -361,8 +359,6 @@ mod test {
 
     #[test]
     fn commutes_normal() {
-        let co_table = COMoveTable::generate();
-        let eo_table = EOMoveTable::generate();
         let eslice_table = ESliceEdgeMoveTable::generate();
 
         let co_sym = RawSymTable::generate();
@@ -370,8 +366,6 @@ mod test {
         let eo_sym = RawSymTable::generate();
         let eo_sym_table = EOSymMoveTable::generate(&eo_sym);
         proptest!(|(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence))| {
-            diagram_commutes(&co_table, CubieCube::SOLVED, mvs.clone());
-            diagram_commutes(&eo_table, CubieCube::SOLVED, mvs.clone());
             diagram_commutes(&eslice_table, CubieCube::SOLVED, mvs.clone());
             sym_diagram_commutes(&co_sym, &co_sym_table, CubieCube::SOLVED, mvs.clone());
             sym_diagram_commutes(&eo_sym, &eo_sym_table, CubieCube::SOLVED, mvs.clone());
@@ -380,12 +374,14 @@ mod test {
 
     #[test]
     fn commutes_domino() {
-        let cp_table = DominoCPMoveTable::generate();
-        let ep_table = DominoEPMoveTable::generate();
+        let co_sym = RawSymTable::generate();
+        let cp_table = DominoCPSymMoveTable::generate(&co_sym);
+        let eo_sym = RawSymTable::generate();
+        let ep_table = DominoEPSymMoveTable::generate(&eo_sym);
         let eslice_table = DominoESliceMoveTable::generate();
         proptest!(|(mvs in vec(any::<DrMove>(), 0..20).prop_map(MoveSequence))| {
-            diagram_commutes(&cp_table, CubieCube::SOLVED, mvs.clone());
-            diagram_commutes(&ep_table, CubieCube::SOLVED, mvs.clone());
+            sym_diagram_commutes(&co_sym, &cp_table, CubieCube::SOLVED, mvs.clone());
+            sym_diagram_commutes(&eo_sym, &ep_table, CubieCube::SOLVED, mvs.clone());
             diagram_commutes(&eslice_table, CubieCube::SOLVED, mvs.clone());
         });
     }
