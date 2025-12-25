@@ -203,9 +203,6 @@ pub trait SymCoordinate: Copy + Default + Eq {
     type Sym: Symmetry;
     type Raw: Coordinate<CubieCube>;
 
-    /// The number of possible coordinate states.
-    fn count() -> usize;
-
     /// The number of equivalence classes this coordinate encodes modulo symmetry.
     fn classes() -> usize;
 
@@ -284,6 +281,7 @@ where
         self.raw_to_sym(S::Raw::from_puzzle(p))
     }
 
+    #[cfg(test)]
     pub fn sym_to_raw(&self, sym: S) -> S::Raw {
         let repr = self.index_to_repr(sym.class());
         let mut c = CubieCube::SOLVED;
@@ -300,10 +298,6 @@ impl SymCoordinate for COSymCoord {
     type Sym = HalfSymmetry;
 
     type Raw = COCoord;
-
-    fn count() -> usize {
-        Self::classes() * 16
-    }
 
     fn classes() -> usize {
         324
@@ -330,10 +324,6 @@ impl SymCoordinate for EOSymCoord {
 
     type Raw = EOCoord;
 
-    fn count() -> usize {
-        Self::classes() * 8
-    }
-
     fn classes() -> usize {
         336
     }
@@ -359,10 +349,6 @@ impl SymCoordinate for CPSymCoord {
 
     type Raw = CPCoord;
 
-    fn count() -> usize {
-        Self::classes() * 16
-    }
-
     fn classes() -> usize {
         2768
     }
@@ -387,10 +373,6 @@ impl SymCoordinate for DominoEPSymCoord {
     type Sym = DrSymmetry;
 
     type Raw = DominoEPCoord;
-
-    fn count() -> usize {
-        Self::classes() * 16
-    }
 
     fn classes() -> usize {
         2768

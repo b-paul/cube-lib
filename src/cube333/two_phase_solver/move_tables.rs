@@ -2,9 +2,10 @@
 
 use crate::coord::{Coordinate, FromCoordinate};
 use crate::cube333::CubieCube;
-use crate::cube333::coordcube::{COCoord, EOCoord};
 use crate::cube333::moves::{Move333, Move333Type};
-use crate::moves::{Cancellation, Move, MoveSequence};
+use crate::moves::{Cancellation, Move};
+#[cfg(test)]
+use crate::moves::MoveSequence;
 
 use super::coords::{
     COSymCoord, CPSymCoord, DominoEPSymCoord, DominoESliceCoord, EOSymCoord, ESliceEdgeCoord,
@@ -28,9 +29,6 @@ where
 {
     /// Interpret a move as a normal move to be applied to a `CubieCube`.
     fn into_move(self) -> Move333;
-
-    /// The number of moves that exist
-    fn count() -> usize;
 
     /// The list of all moves that this type encodes. The length of the returned vector should be
     /// `count()`.
@@ -94,6 +92,7 @@ impl<M: SubMove, C: Coordinate<CubieCube>, const MOVES: usize> MoveTable<M, C, M
         self.table[coord.repr()][mv.index()]
     }
 
+    #[cfg(test)]
     /// Determine what coordinate comes from applying a sequence of moves.
     pub fn make_moves(&self, coord: C, alg: MoveSequence<M>) -> C {
         alg.0.into_iter().fold(coord, |c, m| self.make_move(c, m))
@@ -165,6 +164,7 @@ where
         S::from_repr(idx, sym)
     }
 
+    #[cfg(test)]
     /// Determine what coordinate comes from applying a sequence of moves.
     pub fn make_moves(&self, coord: S, alg: MoveSequence<M>) -> S {
         alg.0.into_iter().fold(coord, |c, m| self.make_move(c, m))
@@ -175,10 +175,6 @@ use crate::cube333::moves::MoveGenerator;
 impl SubMove for Move333 {
     fn into_move(self) -> Move333 {
         self
-    }
-
-    fn count() -> usize {
-        18
     }
 
     const MOVE_LIST: &'static [Move333] = crate::cube333::moves::Htm::MOVE_LIST;
@@ -249,10 +245,6 @@ impl SubMove for DrMove {
             DrMove::U(n) => mv!(U, n),
             DrMove::D(n) => mv!(D, n),
         }
-    }
-
-    fn count() -> usize {
-        10
     }
 
     const MOVE_LIST: &'static [DrMove] = &[
