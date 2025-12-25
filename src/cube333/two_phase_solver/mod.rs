@@ -14,113 +14,97 @@ use crate::moves::MoveSequence;
 
 use std::rc::Rc;
 
-struct Mover {
-    p1_co: Rc<move_tables::COSymMoveTable>,
-    p1_eo: Rc<move_tables::EOSymMoveTable>,
-    p1_slice: Rc<move_tables::ESliceEdgeMoveTable>,
-    p2_cp: Rc<move_tables::DominoCPSymMoveTable>,
-    p2_ep: Rc<move_tables::DominoEPSymMoveTable>,
-    p2_slice: Rc<move_tables::DominoESliceMoveTable>,
+struct Phase1;
+struct Phase2;
+
+trait Phase {
+    type Cube: PhaseCube;
+    type Move: SubMove;
+    type Prune: PhasePrune;
+
+    fn get_cube(sym_tables: &SymTables, cube: &CubieCube) -> Self::Cube;
+
+    fn make_move(mover: &Mover, cube: Self::Cube, m: Self::Move) -> Self::Cube;
+
+    fn init_prune(pruner: &Pruner, c: Self::Cube) -> Self::Prune;
+
+    fn update_prune(pruner: &Pruner, p: Self::Prune, c: Self::Cube) -> Self::Prune;
 }
 
-impl Mover {
-    fn make_p1_move(&self, cube: P1Cube, m: Move333) -> P1Cube {
-        let co = self.p1_co.make_move(cube.co, m);
-        let eo = self.p1_eo.make_move(cube.eo, m);
-        let slice = self.p1_slice.make_move(cube.slice, m);
-        P1Cube { co, eo, slice }
-    }
+impl Phase for Phase1 {
+    type Cube = P1Cube;
+    type Move = Move333;
+    type Prune = P1PruneState;
 
-    fn make_p2_move(&self, cube: P2Cube, m: DrMove) -> P2Cube {
-        let cp = self.p2_cp.make_move(cube.cp, m);
-        let ep = self.p2_ep.make_move(cube.ep, m);
-        let slice = self.p2_slice.make_move(cube.slice, m);
-        P2Cube { cp, ep, slice }
-    }
-}
-
-struct Pruner {
-    p1_co: prune::ESliceTwistPruneTable,
-    p1_eo: prune::ESliceFlipPruneTable,
-    p2_cp: prune::DominoSliceCPPruneTable,
-    p2_ep: prune::DominoSliceEPPruneTable,
-}
-
-impl Pruner {
-    fn init_prune_p1(&self, c: P1Cube) -> P1PruneState {
-        P1PruneState {
-            co_slice: self.p1_co.bound(c.co, c.slice),
-            eo_slice: self.p1_eo.bound(c.eo, c.slice),
-        }
-    }
-
-    fn update_prune_p1(&self, p: P1PruneState, c: P1Cube) -> P1PruneState {
-        let co_slice = self.p1_co.update(p.co_slice, c.co, c.slice);
-        let eo_slice = self.p1_eo.update(p.eo_slice, c.eo, c.slice);
-        P1PruneState { co_slice, eo_slice }
-    }
-
-    fn init_prune_p2(&self, c: P2Cube) -> P2PruneState {
-        P2PruneState {
-            cp_slice: self.p2_cp.bound(c.cp, c.slice),
-            ep_slice: self.p2_ep.bound(c.ep, c.slice),
-        }
-    }
-
-    fn update_prune_p2(&self, p: P2PruneState, c: P2Cube) -> P2PruneState {
-        let cp_slice = self.p2_cp.update(p.cp_slice, c.cp, c.slice);
-        let ep_slice = self.p2_ep.update(p.ep_slice, c.ep, c.slice);
-        P2PruneState { cp_slice, ep_slice }
-    }
-}
-
-struct SymTables {
-    co: Rc<coords::RawSymTable<coords::COSymCoord>>,
-    eo: Rc<coords::RawSymTable<coords::EOSymCoord>>,
-    cp: Rc<coords::RawSymTable<coords::CPSymCoord>>,
-    ep: Rc<coords::RawSymTable<coords::DominoEPSymCoord>>,
-}
-
-impl SymTables {
-    fn get_p1_cube(&self, c: &CubieCube) -> P1Cube {
+    fn get_cube(sym_tables: &SymTables, c: &CubieCube) -> P1Cube {
         P1Cube {
-            co: self.co.puzzle_to_sym(c),
-            eo: self.eo.puzzle_to_sym(c),
+            co: sym_tables.co.puzzle_to_sym(c),
+            eo: sym_tables.eo.puzzle_to_sym(c),
             slice: coords::ESliceEdgeCoord::from_puzzle(c),
         }
     }
 
-    fn get_p2_cube(&self, c: &CubieCube) -> P2Cube {
-        P2Cube {
-            cp: self.cp.puzzle_to_sym(c),
-            ep: self.ep.puzzle_to_sym(c),
-            slice: coords::DominoESliceCoord::from_puzzle(c),
+    fn make_move(mover: &Mover, cube: P1Cube, m: Move333) -> P1Cube {
+        P1Cube {
+            co: mover.p1_co.make_move(cube.co, m),
+            eo: mover.p1_eo.make_move(cube.eo, m),
+            slice: mover.p1_slice.make_move(cube.slice, m),
+        }
+    }
+
+    fn init_prune(pruner: &Pruner, c: P1Cube) -> P1PruneState {
+        P1PruneState {
+            co_slice: pruner.p1_co.bound(c.co, c.slice),
+            eo_slice: pruner.p1_eo.bound(c.eo, c.slice),
+        }
+    }
+
+    fn update_prune(pruner: &Pruner, p: P1PruneState, c: P1Cube) -> P1PruneState {
+        P1PruneState {
+            co_slice: pruner.p1_co.update(p.co_slice, c.co, c.slice),
+            eo_slice: pruner.p1_eo.update(p.eo_slice, c.eo, c.slice),
         }
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
-struct P1PruneState {
-    co_slice: usize,
-    eo_slice: usize,
-}
+impl Phase for Phase2 {
+    type Cube = P2Cube;
+    type Move = DrMove;
+    type Prune = P2PruneState;
 
-#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
-struct P2PruneState {
-    cp_slice: usize,
-    ep_slice: usize,
-}
+    fn get_cube(sym_tables: &SymTables, c: &CubieCube) -> P2Cube {
+        P2Cube {
+            cp: sym_tables.cp.puzzle_to_sym(c),
+            ep: sym_tables.ep.puzzle_to_sym(c),
+            slice: coords::DominoESliceCoord::from_puzzle(c),
+        }
+    }
 
-impl P1PruneState {
-    fn val(self) -> usize {
-        self.co_slice.max(self.eo_slice)
+    fn make_move(mover: &Mover, cube: P2Cube, m: DrMove) -> P2Cube {
+        P2Cube {
+            cp: mover.p2_cp.make_move(cube.cp, m),
+            ep: mover.p2_ep.make_move(cube.ep, m),
+            slice: mover.p2_slice.make_move(cube.slice, m),
+        }
+    }
+
+    fn init_prune(pruner: &Pruner, c: P2Cube) -> P2PruneState {
+        P2PruneState {
+            cp_slice: pruner.p2_cp.bound(c.cp, c.slice),
+            ep_slice: pruner.p2_ep.bound(c.ep, c.slice),
+        }
+    }
+
+    fn update_prune(pruner: &Pruner, p: P2PruneState, c: P2Cube) -> P2PruneState {
+        P2PruneState {
+            cp_slice: pruner.p2_cp.update(p.cp_slice, c.cp, c.slice),
+            ep_slice: pruner.p2_ep.update(p.ep_slice, c.ep, c.slice),
+        }
     }
 }
 
-impl P2PruneState {
-    fn val(self) -> usize {
-        self.cp_slice.max(self.ep_slice)
-    }
+trait PhaseCube: Copy {
+    fn is_solved(self) -> bool;
 }
 
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
@@ -137,17 +121,72 @@ struct P2Cube {
     slice: coords::DominoESliceCoord,
 }
 
-impl P1Cube {
+impl PhaseCube for P1Cube {
     fn is_solved(self) -> bool {
         // TODO this sucks
         self.co.class() == 0 && self.eo.class() == 0 && self.slice.repr() == 0
     }
 }
 
-impl P2Cube {
+impl PhaseCube for P2Cube {
     fn is_solved(self) -> bool {
         self.cp.class() == 0 && self.ep.class() == 0 && self.slice.repr() == 0
     }
+}
+
+trait PhasePrune: Copy {
+    fn val(self) -> usize;
+}
+
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
+struct P1PruneState {
+    co_slice: usize,
+    eo_slice: usize,
+}
+
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
+struct P2PruneState {
+    cp_slice: usize,
+    ep_slice: usize,
+}
+
+impl PhasePrune for P1PruneState {
+    fn val(self) -> usize {
+        self.co_slice.max(self.eo_slice)
+    }
+}
+
+impl PhasePrune for P2PruneState {
+    fn val(self) -> usize {
+        self.cp_slice.max(self.ep_slice)
+    }
+}
+
+struct Mover {
+    p1_co: Rc<move_tables::COSymMoveTable>,
+    p1_eo: Rc<move_tables::EOSymMoveTable>,
+    p1_slice: Rc<move_tables::ESliceEdgeMoveTable>,
+    p2_cp: Rc<move_tables::DominoCPSymMoveTable>,
+    p2_ep: Rc<move_tables::DominoEPSymMoveTable>,
+    p2_slice: Rc<move_tables::DominoESliceMoveTable>,
+}
+
+struct Pruner {
+    p1_co: prune::ESliceTwistPruneTable,
+    p1_eo: prune::ESliceFlipPruneTable,
+    p2_cp: prune::DominoSliceCPPruneTable,
+    p2_ep: prune::DominoSliceEPPruneTable,
+}
+
+struct SymTables {
+    co: Rc<coords::RawSymTable<coords::COSymCoord>>,
+    eo: Rc<coords::RawSymTable<coords::EOSymCoord>>,
+    cp: Rc<coords::RawSymTable<coords::CPSymCoord>>,
+    ep: Rc<coords::RawSymTable<coords::DominoEPSymCoord>>,
+}
+
+impl SymTables {
+
 }
 
 /// A cube solver that uses Kociemba's two phase algorithm.
@@ -231,75 +270,23 @@ impl Solver {
 
     /// Obtain a solving sequence for the cube (such that applying the sequence solves the cube).
     pub fn solve(&self, cube: CubieCube) -> MoveSequence<Move333> {
-        let p1 = self.solve_p1(&cube);
+        let p1 = self.solve_phase::<Phase1>(&cube);
         let cube = cube.make_moves(MoveSequence(p1.clone()));
-        let mut p2 = self.solve_p2(&cube);
+        let mut p2 = self.solve_phase::<Phase2>(&cube);
 
         let mut sol = p1;
         sol.append(&mut p2);
         MoveSequence(sol).cancel()
     }
 
-    fn solve_p1(&self, cube: &CubieCube) -> Vec<Move333> {
-        let cube = self.sym_tables.get_p1_cube(cube);
-        let prune = self.pruner.init_prune_p1(cube);
+    fn solve_phase<P: Phase>(&self, cube: &CubieCube) -> Vec<Move333> {
+        let cube = P::get_cube(&self.sym_tables, cube);
+        let prune = P::init_prune(&self.pruner, cube);
         let mut sol = Vec::new();
 
         let mut depth = 0;
         while depth < 20 {
-            depth = self.search_p1(cube, prune, &mut sol, 0, depth);
-            if depth == 50 {
-                return sol;
-            }
-        }
-
-        panic!("No phase 1 solution found in 20 moves")
-    }
-
-    fn search_p1(
-        &self,
-        cube: P1Cube,
-        prune: P1PruneState,
-        sol: &mut Vec<Move333>,
-        cost: usize,
-        depth: usize,
-    ) -> usize {
-        if cube.is_solved() {
-            // TODO why 50...
-            return 50;
-        }
-        let estimate = cost + prune.val();
-        if estimate > depth {
-            return estimate;
-        }
-        let mut min = usize::MAX;
-        for &m in Move333::MOVE_LIST {
-            // TODO eliminate redundant moves
-            let cube2 = self.mover.make_p1_move(cube, m);
-            let prune2 = self.pruner.update_prune_p1(prune, cube2);
-            sol.push(m);
-
-            let depth = self.search_p1(cube2, prune2, sol, cost + 1, depth);
-            if depth == 50 {
-                return 50;
-            }
-            min = min.min(depth);
-
-            sol.pop();
-        }
-
-        min
-    }
-
-    // WHY IS IT COPY PASTED AAAAAAAAA
-    fn solve_p2(&self, cube: &CubieCube) -> Vec<Move333> {
-        let cube = self.sym_tables.get_p2_cube(cube);
-        let prune = self.pruner.init_prune_p2(cube);
-        let mut sol = Vec::new();
-
-        let mut depth = 0;
-        while depth < 20 {
-            depth = self.search_p2(cube, prune, &mut sol, 0, depth);
+            depth = self.search_phase::<P>(cube, prune, &mut sol, 0, depth);
             if depth == 50 {
                 return sol.into_iter().map(|m| m.into_move()).collect();
             }
@@ -308,11 +295,11 @@ impl Solver {
         panic!("No phase 2 solution found in 20 moves")
     }
 
-    fn search_p2(
+    fn search_phase<P: Phase>(
         &self,
-        cube: P2Cube,
-        prune: P2PruneState,
-        sol: &mut Vec<DrMove>,
+        cube: P::Cube,
+        prune: P::Prune,
+        sol: &mut Vec<P::Move>,
         cost: usize,
         depth: usize,
     ) -> usize {
@@ -325,13 +312,13 @@ impl Solver {
             return estimate;
         }
         let mut min = usize::MAX;
-        for &m in DrMove::MOVE_LIST {
+        for &m in P::Move::MOVE_LIST {
             // TODO eliminate redundant moves
-            let cube2 = self.mover.make_p2_move(cube, m);
-            let prune2 = self.pruner.update_prune_p2(prune, cube2);
+            let cube2 = P::make_move(&self.mover, cube, m);
+            let prune2 = P::update_prune(&self.pruner, prune, cube2);
             sol.push(m);
 
-            let depth = self.search_p2(cube2, prune2, sol, cost + 1, depth);
+            let depth = self.search_phase::<P>(cube2, prune2, sol, cost + 1, depth);
             if depth == 50 {
                 return 50;
             }
