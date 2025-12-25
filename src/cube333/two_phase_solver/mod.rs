@@ -185,10 +185,6 @@ struct SymTables {
     ep: Rc<coords::RawSymTable<coords::DominoEPSymCoord>>,
 }
 
-impl SymTables {
-
-}
-
 /// A cube solver that uses Kociemba's two phase algorithm.
 pub struct Solver {
     mover: Mover,
@@ -200,6 +196,11 @@ impl Default for Solver {
     fn default() -> Self {
         Self::new()
     }
+}
+
+enum SearchResult {
+    Found,
+    Bound(usize),
 }
 
 impl Solver {
@@ -286,13 +287,13 @@ impl Solver {
 
         let mut depth = 0;
         while depth < 20 {
-            depth = self.search_phase::<P>(cube, prune, &mut sol, 0, depth);
-            if depth == 50 {
-                return sol.into_iter().map(|m| m.into_move()).collect();
+            match self.search_phase::<P>(cube, prune, &mut sol, 0, depth) {
+                SearchResult::Found => return sol.into_iter().map(|m| m.into_move()).collect(),
+                SearchResult::Bound(d) => depth = d,
             }
         }
 
-        panic!("No phase 2 solution found in 20 moves")
+        panic!("No phase solution found in 20 moves")
     }
 
     fn search_phase<P: Phase>(
@@ -302,14 +303,13 @@ impl Solver {
         sol: &mut Vec<P::Move>,
         cost: usize,
         depth: usize,
-    ) -> usize {
+    ) -> SearchResult {
         if cube.is_solved() {
-            // TODO why 50...
-            return 50;
+            return SearchResult::Found;
         }
         let estimate = cost + prune.val();
         if estimate > depth {
-            return estimate;
+            return SearchResult::Bound(estimate);
         }
         let mut min = usize::MAX;
         for &m in P::Move::MOVE_LIST {
@@ -318,16 +318,15 @@ impl Solver {
             let prune2 = P::update_prune(&self.pruner, prune, cube2);
             sol.push(m);
 
-            let depth = self.search_phase::<P>(cube2, prune2, sol, cost + 1, depth);
-            if depth == 50 {
-                return 50;
+            match self.search_phase::<P>(cube2, prune2, sol, cost + 1, depth) {
+                SearchResult::Found => return SearchResult::Found,
+                SearchResult::Bound(depth) => min = min.min(depth),
             }
-            min = min.min(depth);
 
             sol.pop();
         }
 
-        min
+        SearchResult::Bound(min)
     }
 }
 
