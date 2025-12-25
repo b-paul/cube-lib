@@ -282,12 +282,12 @@ impl SubMove for DrMove {
     }
 }
 
-type COSymMoveTable = SymMoveTable<Move333, COSymCoord, 18, 8>;
-type EOSymMoveTable = SymMoveTable<Move333, EOSymCoord, 18, 8>;
-type ESliceEdgeMoveTable = MoveTable<Move333, ESliceEdgeCoord, 18>;
-type DominoCPSymMoveTable = SymMoveTable<DrMove, CPSymCoord, 10, 16>;
-type DominoEPSymMoveTable = SymMoveTable<DrMove, DominoEPSymCoord, 10, 16>;
-type DominoESliceMoveTable = MoveTable<DrMove, DominoESliceCoord, 10>;
+pub type COSymMoveTable = SymMoveTable<Move333, COSymCoord, 18, 8>;
+pub type EOSymMoveTable = SymMoveTable<Move333, EOSymCoord, 18, 8>;
+pub type ESliceEdgeMoveTable = MoveTable<Move333, ESliceEdgeCoord, 18>;
+pub type DominoCPSymMoveTable = SymMoveTable<DrMove, CPSymCoord, 10, 16>;
+pub type DominoEPSymMoveTable = SymMoveTable<DrMove, DominoEPSymCoord, 10, 16>;
+pub type DominoESliceMoveTable = MoveTable<DrMove, DominoESliceCoord, 10>;
 
 #[cfg(test)]
 mod test {
