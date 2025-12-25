@@ -206,6 +206,11 @@ pub trait SymCoordinate: Copy + Default + Eq {
     /// The number of equivalence classes this coordinate encodes modulo symmetry.
     fn classes() -> usize;
 
+    /// Determine if the given coordinate represents a solved state
+    fn solved(self) -> bool {
+        self.class() == 0
+    }
+
     /// A representation of this coordinate as a usize, for use, in table lookups.
     fn repr(self) -> (usize, Self::Sym) {
         (self.class(), self.sym())

@@ -8,6 +8,12 @@ pub trait Coordinate<P>: Copy + Default + Eq {
     /// Obtain the coordinate that corresponds to the given puzzle.
     fn from_puzzle(puzzle: &P) -> Self;
 
+    // TODO should this be kept
+    /// Determine whether the given coordinate represents a solved state
+    fn solved(self) -> bool {
+        self.repr() == 0
+    }
+
     /// The number of possible coordinate states.
     fn count() -> usize;
 

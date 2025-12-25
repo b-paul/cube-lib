@@ -123,14 +123,13 @@ struct P2Cube {
 
 impl PhaseCube for P1Cube {
     fn is_solved(self) -> bool {
-        // TODO this sucks
-        self.co.class() == 0 && self.eo.class() == 0 && self.slice.repr() == 0
+        self.co.solved() && self.eo.solved() && self.slice.solved()
     }
 }
 
 impl PhaseCube for P2Cube {
     fn is_solved(self) -> bool {
-        self.cp.class() == 0 && self.ep.class() == 0 && self.slice.repr() == 0
+        self.cp.solved() && self.ep.solved() && self.slice.solved()
     }
 }
 
