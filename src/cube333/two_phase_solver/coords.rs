@@ -409,48 +409,6 @@ impl SymCoordinate for DominoEPSymCoord {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
-pub struct Phase1Cube {
-    co: COCoord,
-    eo: EOCoord,
-    e_slice: ESliceEdgeCoord,
-}
-
-impl Phase1Cube {
-    /// Convert a cubie cube into a phase 1 state cube. This will never fail as every cube can be
-    /// put into the phase 1 solver.
-    pub fn from_puzzle(puzzle: &CubieCube) -> Self {
-        Phase1Cube {
-            co: COCoord::from_puzzle(puzzle),
-            eo: EOCoord::from_puzzle(puzzle),
-            e_slice: ESliceEdgeCoord::from_puzzle(puzzle),
-        }
-    }
-}
-
-pub struct Phase2Cube {
-    cp: CPCoord,
-    ep: DominoEPCoord,
-    e_slice: DominoESliceCoord,
-}
-
-fn cubie_in_domino(puzzle: &CubieCube) -> bool {
-    let p1 = Phase1Cube::from_puzzle(puzzle);
-    p1.co.repr() == 0 && p1.eo.repr() == 0 && p1.e_slice.repr() == 0
-}
-
-impl Phase2Cube {
-    /// Attempt to convert a cubie cube into a Phase2Cube. This will fail if the cube is not in U/D
-    /// domino reduction.
-    pub fn from_puzzle(puzzle: &CubieCube) -> Option<Self> {
-        cubie_in_domino(puzzle).then_some(Phase2Cube {
-            cp: CPCoord::from_puzzle(puzzle),
-            ep: DominoEPCoord::from_puzzle(puzzle),
-            e_slice: DominoESliceCoord::from_puzzle(puzzle),
-        })
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::collections::HashSet;

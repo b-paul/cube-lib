@@ -12,6 +12,7 @@ use crate::coord::{Coordinate, FromCoordinate};
 use crate::cube333::{CubieCube, coordcube::EOCoord, moves::Move333};
 
 use std::marker::PhantomData;
+use std::rc::Rc;
 
 // TODO future stuff:
 //  look into alternative pruning table choices
@@ -81,7 +82,6 @@ type DominoESliceConjTable = SymConjTable<HalfSymmetry, DominoESliceCoord, 8>;
 /// though, we can compute the whole pruning depth based on solely the pruning depth modulo 3 if we
 /// know the pruning depth of the current state we are in, when searching.
 pub struct SymRawPruningTable<
-    'a,
     S: SymCoordinate,
     R: Coordinate<CubieCube>,
     M: SubMove,
@@ -93,28 +93,22 @@ pub struct SymRawPruningTable<
 {
     table: Box<[u8]>,
     conj_table: SymConjTable<S::Sym, R, SYMS>,
-    sym_table: &'a RawSymTable<S>,
-    sym_move_table: &'a SymMoveTable<M, S, MOVES, SYMS>,
-    raw_move_table: &'a MoveTable<M, R, MOVES>,
+    sym_table: Rc<RawSymTable<S>>,
+    sym_move_table: Rc<SymMoveTable<M, S, MOVES, SYMS>>,
+    raw_move_table: Rc<MoveTable<M, R, MOVES>>,
 }
 
-impl<
-    'a,
-    S: SymCoordinate,
-    R: Coordinate<CubieCube>,
-    M: SubMove,
-    const SYMS: usize,
-    const MOVES: usize,
-> SymRawPruningTable<'a, S, R, M, SYMS, MOVES>
+impl<S: SymCoordinate, R: Coordinate<CubieCube>, M: SubMove, const SYMS: usize, const MOVES: usize>
+    SymRawPruningTable<S, R, M, SYMS, MOVES>
 where
     CubieCube: FromCoordinate<R>,
     CubieCube: FromCoordinate<S::Raw>,
 {
     /// Generate the table
     pub fn generate(
-        sym_table: &'a RawSymTable<S>,
-        sym_move_table: &'a SymMoveTable<M, S, MOVES, SYMS>,
-        raw_move_table: &'a MoveTable<M, R, MOVES>,
+        sym_table: Rc<RawSymTable<S>>,
+        sym_move_table: Rc<SymMoveTable<M, S, MOVES, SYMS>>,
+        raw_move_table: Rc<MoveTable<M, R, MOVES>>,
     ) -> Self {
         let table = vec![0xff; S::classes() * R::count() / 4].into_boxed_slice();
         let conj_table = SymConjTable::generate();
@@ -187,11 +181,24 @@ where
         }
     }
 
-    /// Determine the bound of a coordinate pair modulo 3 with a lookup (fast)
-    pub fn query(&self, s: S, r: R) -> u8 {
+    /// Determine the bound of a coordinate pair modulo 3 with a lookup
+    fn query(&self, s: S, r: R) -> u8 {
         let (index, shift) = self.index(s, r);
 
         (self.table[index] >> shift) & 3
+    }
+
+    /// Update a prune bound given the next state (fast)
+    pub fn update(&self, cur: usize, s: S, r: R) -> usize {
+        let n = self.query(s, r) as usize;
+        let c = cur % 3;
+        let d = (n + 3 - c).rem_euclid(3);
+        match d {
+            0 => cur,
+            1 => cur + 1,
+            2 => cur - 1,
+            _ => unreachable!()
+        }
     }
 
     /// Compute the bound on a given coordinate pair (slow)
@@ -222,13 +229,12 @@ where
     }
 }
 
-type ESliceTwistPruneTable<'a> =
-    SymRawPruningTable<'a, COSymCoord, ESliceEdgeCoord, Move333, 8, 18>;
-type ESliceFlipPruneTable<'a> = SymRawPruningTable<'a, EOSymCoord, ESliceEdgeCoord, Move333, 8, 18>;
-type DominoSliceCPPruneTable<'a> =
-    SymRawPruningTable<'a, CPSymCoord, DominoESliceCoord, DrMove, 16, 10>;
-type DominoSliceEPPruneTable<'a> =
-    SymRawPruningTable<'a, DominoEPSymCoord, DominoESliceCoord, DrMove, 16, 10>;
+pub type ESliceTwistPruneTable = SymRawPruningTable<COSymCoord, ESliceEdgeCoord, Move333, 8, 18>;
+pub type ESliceFlipPruneTable = SymRawPruningTable<EOSymCoord, ESliceEdgeCoord, Move333, 8, 18>;
+pub type DominoSliceCPPruneTable =
+    SymRawPruningTable<CPSymCoord, DominoESliceCoord, DrMove, 16, 10>;
+pub type DominoSliceEPPruneTable =
+    SymRawPruningTable<DominoEPSymCoord, DominoESliceCoord, DrMove, 16, 10>;
 
 #[cfg(test)]
 mod test {
@@ -271,15 +277,14 @@ mod test {
         });
     }
 
-    fn admissable<
-        'a,
+    fn admissable_and_update_correct<
         S: SymCoordinate,
         R: Coordinate<CubieCube>,
         M: SubMove,
         const SYMS: usize,
         const MOVES: usize,
     >(
-        prune_table: &SymRawPruningTable<'a, S, R, M, SYMS, MOVES>,
+        prune_table: &SymRawPruningTable<S, R, M, SYMS, MOVES>,
         mvs: MoveSequence<M>,
     ) where
         CubieCube: FromCoordinate<R>,
@@ -289,42 +294,53 @@ mod test {
         let s = prune_table.sym_move_table.make_moves(s, mvs.clone());
         let r = R::from_puzzle(&CubieCube::SOLVED);
         let r = prune_table.raw_move_table.make_moves(r, mvs.clone());
-        assert!(prune_table.bound(s, r) <= mvs.len());
+        let b = prune_table.bound(s, r);
+        assert!(b <= mvs.len());
+
+        for &m in M::MOVE_LIST {
+            let s2 = prune_table.sym_move_table.make_move(s, m);
+            let r2 = prune_table.raw_move_table.make_move(r, m);
+            let b2 = prune_table.update(b, s2, r2);
+            assert_eq!(b2, prune_table.bound(s2, r2));
+        }
     }
 
     #[test]
-    fn check_admissable() {
-        let co_sym_table = RawSymTable::generate();
-        let co_sym_move_table = SymMoveTable::generate(&co_sym_table);
-        let eo_sym_table = RawSymTable::generate();
-        let eo_sym_move_table = SymMoveTable::generate(&eo_sym_table);
-        let e_slice_move_table = MoveTable::generate();
-        let c_prune =
-            ESliceTwistPruneTable::generate(&co_sym_table, &co_sym_move_table, &e_slice_move_table);
+    fn check_admissable_and_update() {
+        let co_sym_table = Rc::new(RawSymTable::generate());
+        let co_sym_move_table = Rc::new(SymMoveTable::generate(&co_sym_table));
+        let eo_sym_table = Rc::new(RawSymTable::generate());
+        let eo_sym_move_table = Rc::new(SymMoveTable::generate(&eo_sym_table));
+        let e_slice_move_table = Rc::new(MoveTable::generate());
+        let c_prune = ESliceTwistPruneTable::generate(
+            co_sym_table,
+            co_sym_move_table,
+            e_slice_move_table.clone(),
+        );
         let e_prune =
-            ESliceFlipPruneTable::generate(&eo_sym_table, &eo_sym_move_table, &e_slice_move_table);
+            ESliceFlipPruneTable::generate(eo_sym_table, eo_sym_move_table, e_slice_move_table);
         proptest!(|(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence))| {
-            admissable(&c_prune, mvs.clone());
-            admissable(&e_prune, mvs.clone());
+            admissable_and_update_correct(&c_prune, mvs.clone());
+            admissable_and_update_correct(&e_prune, mvs.clone());
         });
-        let cp_sym_table = RawSymTable::generate();
-        let cp_sym_move_table = SymMoveTable::generate(&cp_sym_table);
-        let ep_sym_table = RawSymTable::generate();
-        let ep_sym_move_table = SymMoveTable::generate(&ep_sym_table);
-        let d_e_slice_move_table = MoveTable::generate();
+        let cp_sym_table = Rc::new(RawSymTable::generate());
+        let cp_sym_move_table = Rc::new(SymMoveTable::generate(&cp_sym_table));
+        let ep_sym_table = Rc::new(RawSymTable::generate());
+        let ep_sym_move_table = Rc::new(SymMoveTable::generate(&ep_sym_table));
+        let d_e_slice_move_table = Rc::new(MoveTable::generate());
         let d_c_prune = DominoSliceCPPruneTable::generate(
-            &cp_sym_table,
-            &cp_sym_move_table,
-            &d_e_slice_move_table,
+            cp_sym_table,
+            cp_sym_move_table,
+            d_e_slice_move_table.clone(),
         );
         let d_e_prune = DominoSliceEPPruneTable::generate(
-            &ep_sym_table,
-            &ep_sym_move_table,
-            &d_e_slice_move_table,
+            ep_sym_table,
+            ep_sym_move_table,
+            d_e_slice_move_table,
         );
         proptest!(|(mvs in vec(any::<DrMove>(), 0..20).prop_map(MoveSequence))| {
-            admissable(&d_c_prune, mvs.clone());
-            admissable(&d_e_prune, mvs.clone());
+            admissable_and_update_correct(&d_c_prune, mvs.clone());
+            admissable_and_update_correct(&d_e_prune, mvs.clone());
         });
     }
 }
