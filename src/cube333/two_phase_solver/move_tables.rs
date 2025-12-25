@@ -30,6 +30,10 @@ where
     /// Interpret a move as a normal move to be applied to a `CubieCube`.
     fn into_move(self) -> Move333;
 
+    fn axis(self) -> Move333Type {
+        self.into_move().ty
+    }
+
     /// The list of all moves that this type encodes. The length of the returned vector should be
     /// `count()`.
     const MOVE_LIST: &'static [Self];
@@ -244,6 +248,17 @@ impl SubMove for DrMove {
             DrMove::B2 => mv!(B, 2),
             DrMove::U(n) => mv!(U, n),
             DrMove::D(n) => mv!(D, n),
+        }
+    }
+
+    fn axis(self) -> Move333Type {
+        match self {
+            DrMove::R2 => Move333Type::R,
+            DrMove::L2 => Move333Type::L,
+            DrMove::F2 => Move333Type::F,
+            DrMove::B2 => Move333Type::B,
+            DrMove::U(_) => Move333Type::U,
+            DrMove::D(_) => Move333Type::D,
         }
     }
 
