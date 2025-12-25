@@ -312,8 +312,10 @@ impl Solver {
             return SearchResult::Bound(estimate);
         }
         let mut min = usize::MAX;
-        for &m in P::Move::MOVE_LIST {
-            // TODO eliminate redundant moves
+        let last = sol.last().copied();
+        for &m in P::Move::MOVE_LIST.iter().filter(|&&m| {
+            last.is_none_or(|l| l.axis() != m.axis() && l.axis() != m.axis().opposite())
+        }) {
             let cube2 = P::make_move(&self.mover, cube, m);
             let prune2 = P::update_prune(&self.pruner, prune, cube2);
             sol.push(m);

@@ -23,6 +23,20 @@ pub enum Move333Type {
     B,
 }
 
+impl Move333Type {
+    /// The move type on the face opposite to the given one.
+    pub fn opposite(self) -> Move333Type {
+        match self {
+            Move333Type::R => Move333Type::L,
+            Move333Type::L => Move333Type::R,
+            Move333Type::U => Move333Type::D,
+            Move333Type::D => Move333Type::U,
+            Move333Type::F => Move333Type::B,
+            Move333Type::B => Move333Type::F,
+        }
+    }
+}
+
 /// Stores a move type and counter. An anti-clockwise move will have a count of 3.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(test, derive(Arbitrary))]
