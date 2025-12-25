@@ -7,9 +7,9 @@ use super::coords::{
     RawSymTable, SymCoordinate,
 };
 use super::move_tables::{DrMove, MoveTable, SubMove, SymMoveTable};
-use super::symmetry::{HalfSymmetry, Symmetry};
+use super::symmetry::{Symmetry};
 use crate::coord::{Coordinate, FromCoordinate};
-use crate::cube333::{CubieCube, coordcube::EOCoord, moves::Move333};
+use crate::cube333::{CubieCube, moves::Move333};
 
 use std::marker::PhantomData;
 use std::rc::Rc;
@@ -69,10 +69,6 @@ where
         self.inv_table[r.repr()][s.repr()]
     }
 }
-
-type SliceConjTable = SymConjTable<HalfSymmetry, ESliceEdgeCoord, 8>;
-type EoConjTable = SymConjTable<HalfSymmetry, EOCoord, 8>;
-type DominoESliceConjTable = SymConjTable<HalfSymmetry, DominoESliceCoord, 8>;
 
 /// A pruning table indexed by the class of a symmetry coordinate and a raw coordinate.
 ///
@@ -197,7 +193,7 @@ where
             0 => cur,
             1 => cur + 1,
             2 => cur - 1,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -239,12 +235,19 @@ pub type DominoSliceEPPruneTable =
 #[cfg(test)]
 mod test {
     use super::super::move_tables::{DrMove, SubMove};
+    use super::super::symmetry::HalfSymmetry;
     use super::*;
+    use crate::coord::{Coordinate, FromCoordinate};
+    use crate::cube333::coordcube::EOCoord;
     use crate::cube333::moves::Move333;
     use crate::moves::MoveSequence;
 
     use proptest::collection::vec;
     use proptest::prelude::*;
+
+    type SliceConjTable = SymConjTable<HalfSymmetry, ESliceEdgeCoord, 8>;
+    type EoConjTable = SymConjTable<HalfSymmetry, EOCoord, 8>;
+    type DominoESliceConjTable = SymConjTable<HalfSymmetry, DominoESliceCoord, 8>;
 
     fn diagram_commutes<
         S: Symmetry,

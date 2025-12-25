@@ -34,10 +34,12 @@ pub trait Symmetry: Copy + Default + Eq {
 }
 
 impl CubieCube {
+    /* unused
     /// Obtain the cube given by applying some symmetry
     pub(super) fn apply_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
         sym.apply(self)
     }
+    */
 
     /// Obtain the cube given by conjugating by some symmetry. We conjugate in the order S C S^-1
     pub(super) fn conjugate_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
@@ -142,8 +144,6 @@ impl<S: Symmetry, M: SubMove, const SYMS: usize, const MOVES: usize>
 // We can just think of this 4 bit number as an identifier for each symmetry.
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct DrSymmetry(u8);
-
-pub type DrSymMultTable = SymMultTable<DrSymmetry, 16>;
 
 /// A cube that, when multiplied, applies the F2 symmetry.
 #[rustfmt::skip]
