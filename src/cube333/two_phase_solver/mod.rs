@@ -17,17 +17,22 @@ use std::rc::Rc;
 struct Phase1;
 struct Phase2;
 
+/// Organisation trait for each phase
 trait Phase {
     type Cube: PhaseCube;
     type Move: SubMove;
     type Prune: PhasePrune;
 
+    /// Convert a cubiecube into a phase encoding cube
     fn get_cube(sym_tables: &SymTables, cube: &CubieCube) -> Self::Cube;
 
+    /// Apply a move to a cube
     fn make_move(mover: &Mover, cube: Self::Cube, m: Self::Move) -> Self::Cube;
 
+    /// Get the initial pruning value of a cube
     fn init_prune(pruner: &Pruner, c: Self::Cube) -> Self::Prune;
 
+    /// Update a pruning value based on a next state
     fn update_prune(pruner: &Pruner, p: Self::Prune, c: Self::Cube) -> Self::Prune;
 }
 
@@ -280,6 +285,7 @@ impl Solver {
     }
 
     fn solve_phase<P: Phase>(&self, cube: &CubieCube) -> Vec<Move333> {
+        // This is just ida*! go read about it yourself!! grrrrrr
         let cube = P::get_cube(&self.sym_tables, cube);
         let prune = P::init_prune(&self.pruner, cube);
         let mut sol = Vec::new();
