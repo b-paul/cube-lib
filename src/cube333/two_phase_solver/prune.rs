@@ -7,7 +7,7 @@ use super::coords::{
     RawSymTable, SymCoordinate,
 };
 use super::move_tables::{DrMove, MoveTable, SubMove, SymMoveTable};
-use super::symmetry::{Symmetry};
+use super::symmetry::Symmetry;
 use crate::coord::{Coordinate, FromCoordinate};
 use crate::cube333::{CubieCube, moves::Move333};
 
