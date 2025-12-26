@@ -3,9 +3,9 @@
 use crate::coord::{Coordinate, FromCoordinate};
 use crate::cube333::CubieCube;
 use crate::cube333::moves::{Move333, Move333Type};
-use crate::moves::{Cancellation, Move};
 #[cfg(test)]
 use crate::moves::MoveSequence;
+use crate::moves::{Cancellation, Move};
 
 use super::coords::{
     COSymCoord, CPSymCoord, DominoEPSymCoord, DominoESliceCoord, EOSymCoord, ESliceEdgeCoord,
