@@ -23,6 +23,20 @@ pub enum Move333Type {
     B,
 }
 
+impl Move333Type {
+    /// The move type on the face opposite to the given one.
+    pub fn opposite(self) -> Move333Type {
+        match self {
+            Move333Type::R => Move333Type::L,
+            Move333Type::L => Move333Type::R,
+            Move333Type::U => Move333Type::D,
+            Move333Type::D => Move333Type::U,
+            Move333Type::F => Move333Type::B,
+            Move333Type::B => Move333Type::F,
+        }
+    }
+}
+
 /// Stores a move type and counter. An anti-clockwise move will have a count of 3.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(test, derive(Arbitrary))]
@@ -50,10 +64,7 @@ impl crate::moves::Move for Move333 {
         }
     }
 
-    fn cancel(self, b: Self) -> Cancellation<Self>
-    where
-        Self: Sized,
-    {
+    fn cancel(self, b: Self) -> Cancellation<Self> {
         if self.ty == b.ty {
             let count = (self.count + b.count) % 4;
             if count == 0 {
@@ -155,7 +166,7 @@ const CO_OFFSETS: [[u8; 8]; 6] = [
     [1, 2, 0, 0, 2, 1, 0, 0],
     [0, 0, 1, 2, 0, 0, 2, 1],
 ];
-const CP_OFFSETS: [[usize; 8]; 6] = [
+const CP_OFFSETS: [[u8; 8]; 6] = [
     [4, 1, 2, 0, 7, 5, 6, 3],
     [0, 2, 6, 3, 4, 1, 5, 7],
     [3, 0, 1, 2, 4, 5, 6, 7],
@@ -171,7 +182,7 @@ const EO_OFFSETS: [[u8; 12]; 6] = [
     [1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0],
     [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1],
 ];
-const EP_OFFSETS: [[usize; 12]; 6] = [
+const EP_OFFSETS: [[u8; 12]; 6] = [
     [0, 1, 2, 8, 4, 5, 6, 11, 7, 9, 10, 3],
     [0, 10, 2, 3, 4, 9, 6, 7, 8, 1, 5, 11],
     [3, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11],
@@ -181,27 +192,21 @@ const EP_OFFSETS: [[usize; 12]; 6] = [
 ];
 
 impl CubieCube {
-    // This should really not be borrowing...
-    /// Copy the cube and apply an algorithm to it.
-    pub fn make_moves(&self, mvs: MoveSequence<Move333>) -> CubieCube {
-        let mut r = self.clone();
-        for mv in mvs.0 {
-            r = r.make_move(mv);
-        }
-        r
+    /// Apply an algorithm to a cube
+    pub fn make_moves(self, mvs: MoveSequence<Move333>) -> CubieCube {
+        mvs.0.into_iter().fold(self, |c, m| c.make_move(m))
     }
 
     // This function doesn't really need to be fast since coordinates exist
-    /// Copy the cube, apply a move to it, then return the new cube.
-    pub fn make_move(&self, mv: Move333) -> CubieCube {
-        let mut r = self.clone();
-        for _ in 0..mv.count {
-            r = r.make_move_type(mv.ty);
-        }
-        r
+    /// Apply a move to a cube.
+    pub fn make_move(self, mv: Move333) -> CubieCube {
+        (0..mv.count).fold(self, |c, _| c.make_move_type(mv.ty))
     }
 
-    fn make_move_type(&self, mv: Move333Type) -> CubieCube {
+    // TODO make this const please that would be very handy :)
+
+    /// Make a single application of a move
+    pub fn make_move_type(self, mv: Move333Type) -> CubieCube {
         let co_offsets = CO_OFFSETS[mv as usize];
         let cp_offsets = CP_OFFSETS[mv as usize];
         let eo_offsets = EO_OFFSETS[mv as usize];
@@ -218,13 +223,13 @@ impl CubieCube {
         let mut ep = [0; 12];
 
         for i in 0..8 {
-            co[i] = (selfco[cp_offsets[i]] + co_offsets[i]) % 3;
-            cp[i] = selfcp[cp_offsets[i]];
+            co[i] = (selfco[cp_offsets[i] as usize] + co_offsets[i]) % 3;
+            cp[i] = selfcp[cp_offsets[i] as usize];
         }
 
         for i in 0..12 {
-            eo[i] = (selfeo[ep_offsets[i]] + eo_offsets[i]) % 2;
-            ep[i] = selfep[ep_offsets[i]];
+            eo[i] = (selfeo[ep_offsets[i] as usize] + eo_offsets[i]) % 2;
+            ep[i] = selfep[ep_offsets[i] as usize];
         }
 
         let co = co.map(|n| n.try_into().unwrap());
@@ -233,6 +238,46 @@ impl CubieCube {
         let ep = ep.map(|n| n.try_into().unwrap());
 
         CubieCube { co, cp, eo, ep }
+    }
+
+    /// Multiply two cube states in the Rubik's cube group.
+    pub fn multiply_cube(self, other: CubieCube) -> CubieCube {
+        let mut result = CubieCube::SOLVED;
+
+        for i in 0..8 {
+            let oa = self.co[other.cp[i] as usize];
+            let ob = other.co[i];
+            let o = oa.twist_by(ob);
+            result.co[i] = o;
+            result.cp[i] = self.cp[other.cp[i] as usize];
+        }
+
+        for i in 0..12 {
+            let oa = self.eo[other.ep[i] as usize];
+            let ob = other.eo[i];
+            let o = oa.flip_by(ob);
+            result.eo[i] = o;
+            result.ep[i] = self.ep[other.ep[i] as usize];
+        }
+
+        result
+    }
+
+    /// Get the inverse in the Rubik's cube group.
+    pub fn inverse(self) -> CubieCube {
+        let mut result = CubieCube::SOLVED;
+
+        for i in 0..8 {
+            result.co[self.cp[i] as usize] = self.co[i].inverse();
+            result.cp[self.cp[i] as usize] = (i as u8).try_into().unwrap();
+        }
+
+        for i in 0..12 {
+            result.eo[self.ep[i] as usize] = self.eo[i];
+            result.ep[self.ep[i] as usize] = (i as u8).try_into().unwrap();
+        }
+
+        result
     }
 }
 
@@ -257,23 +302,31 @@ mod tests {
 
     proptest! {
         #[test]
-        fn cancel_same_moves(mvs in vec(any::<Move333>(), 0..20).prop_map(|v| MoveSequence(v))) {
+        fn cancel_same_moves(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence)) {
             let cancelled = mvs.clone().cancel();
             assert!(cancelled.len() <= mvs.len());
             assert_eq!(CubieCube::SOLVED.make_moves(mvs), CubieCube::SOLVED.make_moves(cancelled));
         }
 
         #[test]
-        fn invert_identity(mvs in vec(any::<Move333>(), 0..20).prop_map(|v| MoveSequence(v))) {
+        fn invert_identity(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence)) {
             let cancelled = mvs.clone().cancel();
             assert_eq!(CubieCube::SOLVED.make_moves(mvs.clone()).make_moves(mvs.inverse()), CubieCube::SOLVED);
             assert!(cancelled.clone().append(cancelled.clone().inverse()).cancel().is_empty());
         }
 
         #[test]
-        fn cancel_idemotent(mvs in vec(any::<Move333>(), 0..20).prop_map(|v| MoveSequence(v))) {
+        fn cancel_idemotent(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence)) {
             let cancelled = mvs.clone().cancel();
             assert_eq!(cancelled.clone().cancel(), cancelled);
+        }
+
+        #[test]
+        fn inverse_apply(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence)) {
+            // TODO use real random state for this proptest! doing random moves is silly!
+            let fake_random_state = CubieCube::SOLVED.make_moves(mvs);
+            assert_eq!(CubieCube::SOLVED, fake_random_state.clone().multiply_cube(fake_random_state.clone().inverse()));
+            assert_eq!(CubieCube::SOLVED, fake_random_state.clone().inverse().multiply_cube(fake_random_state.clone()));
         }
     }
 }

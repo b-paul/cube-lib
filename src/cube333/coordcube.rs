@@ -1,13 +1,182 @@
 use super::{Corner, CornerTwist, CubieCube, Edge, EdgeFlip};
+use crate::coord::{Coordinate, FromCoordinate};
 
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
-struct COCoord(u16);
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
-struct CPCoord(u16);
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
-struct EOCoord(u16);
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
-struct EPCoord(u32);
+/// A coordinate representation of the corner orientation of a cube with respect to the U/F faces.
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
+pub struct COCoord(u16);
+
+/// A coordinate representation of the corner permutation of a cube with respect to the U/F faces.
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
+pub struct CPCoord(u16);
+
+/// A coordinate representation of the edge orientation of a cube with respect to the U/F faces.
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
+pub struct EOCoord(u16);
+
+/// A coordinate representation of the edge permutation of a cube with respect to the U/F faces.
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
+pub struct EPCoord(u32);
+
+// TODO AHHHH
+// this is copied from the two phase solver!!! so messy!!! AHHHH
+fn set_p_coord<const COUNT: usize, const LOWER: usize, const UPPER: usize, P: Copy>(
+    mut c: usize,
+    perm: &mut [P; COUNT],
+    mut bag: Vec<P>,
+) {
+    let mut n = [0; COUNT];
+    for (i, n) in n.iter_mut().enumerate() {
+        *n = c % (i + 1);
+        c /= i + 1;
+    }
+
+    for i in (LOWER..=UPPER).rev() {
+        let index = n[i - LOWER];
+        perm[i] = bag[index];
+        bag.remove(index);
+    }
+}
+
+impl Coordinate<CubieCube> for COCoord {
+    fn from_puzzle(puzzle: &CubieCube) -> Self {
+        COCoord(to_o_coord::<8, 3>(&puzzle.co.map(|n| n.into())))
+    }
+
+    fn count() -> usize {
+        // 3^7
+        2187
+    }
+
+    fn repr(self) -> usize {
+        self.0 as usize
+    }
+
+    fn from_repr(n: usize) -> Self {
+        COCoord(n as u16)
+    }
+}
+
+impl FromCoordinate<COCoord> for CubieCube {
+    fn set_coord(&mut self, coord: COCoord) {
+        let mut first = CornerTwist::Oriented;
+        let mut n = coord.0;
+
+        for i in (1..8).rev() {
+            self.co[i] = match n % 3 {
+                0 => CornerTwist::Oriented,
+                1 => {
+                    first = first.anticlockwise();
+                    CornerTwist::Clockwise
+                }
+                2 => {
+                    first = first.clockwise();
+                    CornerTwist::AntiClockwise
+                }
+                _ => unreachable!(),
+            };
+            n /= 3;
+        }
+
+        self.co[0] = first;
+    }
+}
+
+impl Coordinate<CubieCube> for CPCoord {
+    fn from_puzzle(puzzle: &CubieCube) -> Self {
+        CPCoord(to_p_coord::<8>(&puzzle.cp.map(|n| n.into())) as u16)
+    }
+
+    fn count() -> usize {
+        40320
+    }
+
+    fn repr(self) -> usize {
+        self.0 as usize
+    }
+
+    fn from_repr(n: usize) -> Self {
+        CPCoord(n as u16)
+    }
+}
+
+impl FromCoordinate<CPCoord> for CubieCube {
+    fn set_coord(&mut self, coord: CPCoord) {
+        use crate::cube333::corner::Corner as C;
+        #[rustfmt::skip]
+        let bag = vec![C::DBR, C::DBL, C::DFL, C::DFR, C::UBR, C::UBL, C::UFL, C::UFR];
+
+        set_p_coord::<8, 0, 7, C>(coord.repr(), &mut self.cp, bag);
+    }
+}
+
+impl Coordinate<CubieCube> for EOCoord {
+    fn from_puzzle(puzzle: &CubieCube) -> Self {
+        EOCoord(to_o_coord::<12, 2>(&puzzle.eo.map(|n| n.into())))
+    }
+
+    fn count() -> usize {
+        // 2^11
+        2048
+    }
+
+    fn repr(self) -> usize {
+        self.0 as usize
+    }
+
+    fn from_repr(n: usize) -> Self {
+        EOCoord(n as u16)
+    }
+}
+
+impl FromCoordinate<EOCoord> for CubieCube {
+    fn set_coord(&mut self, coord: EOCoord) {
+        let mut first = EdgeFlip::Oriented;
+        let mut n = coord.0;
+
+        for i in (1..12).rev() {
+            self.eo[i] = match n % 2 {
+                0 => EdgeFlip::Oriented,
+                1 => {
+                    first = first.flip();
+                    EdgeFlip::Flipped
+                }
+                _ => unreachable!(),
+            };
+            n /= 2;
+        }
+
+        self.eo[0] = first;
+    }
+}
+
+impl Coordinate<CubieCube> for EPCoord {
+    fn from_puzzle(puzzle: &CubieCube) -> Self {
+        EPCoord(to_p_coord::<12>(&puzzle.ep.map(|n| n.into())))
+    }
+
+    fn count() -> usize {
+        // a lot
+        479001600
+    }
+
+    fn repr(self) -> usize {
+        self.0 as usize
+    }
+
+    fn from_repr(n: usize) -> Self {
+        EPCoord(n as u32)
+    }
+}
+
+impl FromCoordinate<EPCoord> for CubieCube {
+    fn set_coord(&mut self, coord: EPCoord) {
+        use crate::cube333::edge::Edge as E;
+        #[rustfmt::skip]
+        let bag = vec![E::BR, E::BL, E::FL, E::FR, E::DR, E::DB, E::DL, E::DF, E::UR, E::UB, E::UL, E::UF];
+
+        set_p_coord::<12, 0, 11, E>(coord.repr(), &mut self.ep, bag);
+    }
+}
 
 /// Implementation of a coord cube, representing pieces using coordinates, which are values which
 /// are isomorphic to arrays represented in a cubie cube.
@@ -146,10 +315,10 @@ impl CubieCube {
             });
         }
 
-        let co = COCoord(to_o_coord::<8, 3>(&self.co.map(|n| n.into())));
-        let cp = CPCoord(to_p_coord::<8>(&self.cp.map(|n| n.into())) as u16);
-        let eo = EOCoord(to_o_coord::<12, 2>(&self.eo.map(|n| n.into())));
-        let ep = EPCoord(to_p_coord::<12>(&self.ep.map(|n| n.into())));
+        let co = COCoord::from_puzzle(self);
+        let cp = CPCoord::from_puzzle(self);
+        let eo = EOCoord::from_puzzle(self);
+        let ep = EPCoord::from_puzzle(self);
 
         Ok(CoordCube { co, cp, eo, ep })
     }
@@ -157,10 +326,11 @@ impl CubieCube {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::cube333::{
+        Corner, CornerTwist, CubieCube, Edge, EdgeFlip, StickerCube,
         coordcube::{CoordCube, CubieToCoordError},
         moves::{Move333, Move333Type},
-        Corner, CornerTwist, CubieCube, Edge, EdgeFlip, StickerCube,
     };
     use crate::mv;
 
@@ -245,5 +415,26 @@ mod tests {
         swap.cp[0] = Corner::UBR;
         swap.cp[3] = Corner::UFR;
         assert!(swap.to_coord().is_ok());
+    }
+
+    use proptest::prelude::*;
+
+    proptest! {
+        // TODO this test is not good, it should take a *random state* as input to test that the
+        // last piece is set correctly, but I haven't been bothered to make that yet...
+
+        #[test]
+        fn convert_invertible_co(c in (0..2187u16).prop_map(COCoord)) {
+            let mut cube = CubieCube::SOLVED;
+            cube.set_coord(c);
+            assert_eq!(c, COCoord::from_puzzle(&cube));
+        }
+
+        #[test]
+        fn convert_invertible_eo(c in (0..2048u16).prop_map(EOCoord)) {
+            let mut cube = CubieCube::SOLVED;
+            cube.set_coord(c);
+            assert_eq!(c, EOCoord::from_puzzle(&cube));
+        }
     }
 }

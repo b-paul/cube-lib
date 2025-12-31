@@ -4,15 +4,16 @@ use crate::error::TryFromIntToEnumError;
 /// An enum for every corner piece location.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[allow(missing_docs)]
+#[repr(u8)]
 pub enum Corner {
-    UFR,
-    UFL,
-    UBL,
-    UBR,
-    DFR,
-    DFL,
-    DBL,
-    DBR,
+    UFR = 0,
+    UFL = 1,
+    UBL = 2,
+    UBR = 3,
+    DFR = 4,
+    DFL = 5,
+    DBL = 6,
+    DBR = 7,
 }
 
 use Corner as C;
@@ -47,16 +48,7 @@ impl Corner {
 
 impl From<Corner> for u8 {
     fn from(value: Corner) -> Self {
-        match value {
-            C::UFR => 0,
-            C::UFL => 1,
-            C::UBL => 2,
-            C::UBR => 3,
-            C::DFR => 4,
-            C::DFL => 5,
-            C::DBL => 6,
-            C::DBR => 7,
-        }
+        value as u8
     }
 }
 
@@ -81,21 +73,18 @@ impl TryFrom<u8> for Corner {
 /// An enum for every corner twist case.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[allow(missing_docs)]
+#[repr(u8)]
 pub enum CornerTwist {
-    Oriented,
-    Clockwise,
-    AntiClockwise,
+    Oriented = 0,
+    Clockwise = 1,
+    AntiClockwise = 2,
 }
 
 use CornerTwist as CT;
 
 impl From<CornerTwist> for u8 {
     fn from(value: CornerTwist) -> Self {
-        match value {
-            CornerTwist::Oriented => 0,
-            CornerTwist::Clockwise => 1,
-            CornerTwist::AntiClockwise => 2,
-        }
+        value as u8
     }
 }
 
@@ -137,6 +126,15 @@ impl CornerTwist {
             CT::Oriented => self,
             CT::Clockwise => self.clockwise(),
             CT::AntiClockwise => self.anticlockwise(),
+        }
+    }
+
+    /// Calculate the inverse twist of a given twist.
+    pub fn inverse(self) -> CornerTwist {
+        match self {
+            CT::Oriented => CT::Oriented,
+            CT::Clockwise => CT::AntiClockwise,
+            CT::AntiClockwise => CT::Clockwise,
         }
     }
 }
