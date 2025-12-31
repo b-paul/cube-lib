@@ -14,6 +14,8 @@ pub mod edge;
 /// Defines move types and implements application of moves to the CubieCube.
 pub mod moves;
 
+pub mod two_phase_solver;
+
 mod cubiecube;
 
 use corner::{Corner, CornerPos, CornerTwist};
@@ -417,8 +419,8 @@ impl std::fmt::Display for StickerCube {
 mod tests {
     #[test]
     fn pieces_on_solved_cube() {
-        use super::edge::EdgePos::*;
         use super::StickerCube;
+        use super::edge::EdgePos::*;
         assert_eq!(StickerCube::SOLVED.edge_at(UB).unwrap(), UB, "UB");
         assert_eq!(StickerCube::SOLVED.edge_at(UR).unwrap(), UR, "UR");
         assert_eq!(StickerCube::SOLVED.edge_at(UF).unwrap(), UF, "UF");
