@@ -1,57 +1,11 @@
 //! Implements symmetries for the `CubieCube` and symmetry tables for use in move table generation.
 
 use super::move_tables::SubMove;
-use crate::cube333::{Corner as C, CornerTwist as CT, CubieCube, Edge as E, EdgeFlip as EF};
+use crate::cube333::{
+    Corner as C, CornerTwist as CT, CubieCube, Edge as E, EdgeFlip as EF, symmetry::Symmetry,
+};
 
 use std::marker::PhantomData;
-
-pub trait Symmetry: Copy + Default + Eq {
-    /// A representation of this symmetry as a usize, for use in table lookups.
-    fn repr(self) -> usize;
-
-    /// Convert the representation of a symmetry to the symmetry itself. We assume 0 corresponds to
-    /// the identity symmetry.
-    fn from_repr(n: usize) -> Self;
-
-    /// Iterator over every symmetry in order of representation
-    fn get_all() -> impl Iterator<Item = Self>;
-
-    /// Apply this symmetry to the given puzzle, written P S
-    fn apply(&self, cube: CubieCube) -> CubieCube;
-
-    /// Apply the inverse of this symmetry to the given puzzle, written P S^-1
-    fn apply_inverse(&self, cube: CubieCube) -> CubieCube;
-
-    /// Conjugate the given puzzle by this symmetry, written S P S^-1
-    fn conjugate(&self, cube: CubieCube) -> CubieCube {
-        self.apply_inverse(self.apply(CubieCube::SOLVED).multiply_cube(cube))
-    }
-
-    /// Conjugate the given puzzle by the inverse of this symmetry, written S^-1 P S^
-    fn conjugate_inverse(&self, cube: CubieCube) -> CubieCube {
-        self.apply(self.apply_inverse(CubieCube::SOLVED).multiply_cube(cube))
-    }
-}
-
-impl CubieCube {
-    /* unused
-    /// Obtain the cube given by applying some symmetry
-    pub(super) fn apply_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
-        sym.apply(self)
-    }
-    */
-
-    /// Obtain the cube given by conjugating by some symmetry. We conjugate in the order S C S^-1
-    pub(super) fn conjugate_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
-        sym.conjugate(self)
-    }
-
-    /// Obtain the cube given by conjugating by the inverse of some symmetry. We hence conjugate in
-    /// the order S^-1 C S
-    pub(super) fn conjugate_inverse_symmetry<S: Symmetry>(self, sym: S) -> CubieCube {
-        sym.conjugate_inverse(self)
-    }
-}
 
 /// Multiplication table for a `Symmetry` group.
 pub struct SymMultTable<S: Symmetry, const COUNT: usize> {

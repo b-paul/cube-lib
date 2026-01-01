@@ -13,6 +13,8 @@ pub mod corner;
 pub mod edge;
 /// Defines move types and implements application of moves to the CubieCube.
 pub mod moves;
+/// Defines symmetries and subgroups of symmetries of the cube.
+pub mod symmetry;
 
 pub mod two_phase_solver;
 
