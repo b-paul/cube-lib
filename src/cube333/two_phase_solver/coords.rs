@@ -1,11 +1,12 @@
 //! This module contains the coordinate representations of cube states relevant to the two phases
 //! of these solver.
 
-use super::symmetry::{DrSymmetry, HalfSymmetry, Symmetry};
+use super::symmetry::{DrSymmetry, HalfSymmetry};
 use crate::coord::{Coordinate, FromCoordinate};
 use crate::cube333::{
     CubieCube,
     coordcube::{COCoord, CPCoord, EOCoord},
+    symmetry::Symmetry,
 };
 
 // TODO this is kinda unreadable lol
