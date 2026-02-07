@@ -38,7 +38,7 @@ impl CubieCube {
         */
         // wait this could be simded lol
         use std::mem::transmute;
-        use std::simd::{prelude::*, Select};
+        use std::simd::{Select, prelude::*};
         let co = u8x8::from_array(self.co.map(|o| o as u8));
         let cp = u8x8::from_array(self.cp.map(|p| p as u8));
         let orbs = u8x8::from_array([0, 1, 0, 1, 0, 1, 0, 1]);
