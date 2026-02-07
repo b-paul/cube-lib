@@ -1,4 +1,4 @@
-name: coverage
+name: Coverage
 
 on: [push]
 jobs:
@@ -6,8 +6,8 @@ jobs:
     name: coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: taiki-e/install-action@v2
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@master
         with:
-          tool: cargo-tarpaulin
+          toolchain: nightly
       - run: cargo tarpaulin --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
