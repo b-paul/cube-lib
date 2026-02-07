@@ -1,9 +1,12 @@
 // Cube333 module
 //! Module for the 3x3x3 Rubik's cube (the one everyone knows).
 
+// TODO implement arbitrary for CubieCube (and others things)
+
 use crate::error::TryFromIntToEnumError;
 use thiserror::Error;
 
+pub mod axis;
 /// Implementation of a cube based on coordinates, which are more performant than arrays when
 /// making moves but harder to work with.
 pub mod coordcube;
@@ -97,6 +100,7 @@ impl TryFrom<StickerCube> for CubieCube {
     type Error = StickerToCubieError;
 
     fn try_from(sticker_cube: StickerCube) -> Result<Self, Self::Error> {
+        // TODO this is not converted relative to the center orientation, maybe that's bad?
         let mut co = [CornerTwist::Oriented; 8];
         let mut cp = [Corner::UBL; 8];
         let mut eo = [EdgeFlip::Oriented; 12];
