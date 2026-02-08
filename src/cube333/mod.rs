@@ -36,6 +36,7 @@ pub enum StickerToPieceError {
 /// An implementation of a Rubik's cube which represents itself using pieces in an array. A Piece
 /// has an orientation and a permutation to uniquely identify itself. Note that there exists some
 /// `CubieCube` states which are not solvable (e.g. a corner twist).
+#[repr(align(8))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CubieCube {
     // May want to make these values not public
