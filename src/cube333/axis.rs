@@ -85,8 +85,8 @@ impl CubieCube {
         use std::mem::transmute;
         use std::simd::prelude::*;
         // WHAAAT you can do this?!?! Simd infers Simd<12, u8> and 12 isn't a power of 2!!
-        let eo = Simd::load_or_default(&(self.eo.map(|o| o as u8)));
-        let ep = Simd::load_or_default(&(self.ep.map(|p| p as u8)));
+        let eo = Simd::from_array(self.eo.map(|o| o as u8));
+        let ep = Simd::from_array(self.ep.map(|p| p as u8));
         match axis {
             Axis::FB => self.eo,
             Axis::LR => {
