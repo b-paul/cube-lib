@@ -103,6 +103,7 @@ impl TryFrom<u8> for CornerTwist {
 
 impl CornerTwist {
     /// Twist a corner clockwise.
+    #[inline]
     pub fn clockwise(self) -> CornerTwist {
         match self {
             CT::Oriented => CT::Clockwise,
@@ -112,6 +113,7 @@ impl CornerTwist {
     }
 
     /// Twist a corner anticlockwise.
+    #[inline]
     pub fn anticlockwise(self) -> CornerTwist {
         match self {
             CT::Oriented => CT::AntiClockwise,
@@ -121,6 +123,7 @@ impl CornerTwist {
     }
 
     /// Twist a corner by some direction.
+    #[inline]
     pub fn twist_by(self, twist: CornerTwist) -> CornerTwist {
         match twist {
             CT::Oriented => self,
@@ -130,6 +133,7 @@ impl CornerTwist {
     }
 
     /// Calculate the inverse twist of a given twist.
+    #[inline]
     pub fn inverse(self) -> CornerTwist {
         match self {
             CT::Oriented => CT::Oriented,

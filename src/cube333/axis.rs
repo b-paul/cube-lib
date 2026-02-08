@@ -18,6 +18,7 @@ pub enum Axis {
 impl CubieCube {
     /// Get the corner orientation of this puzzle relative to a given axis i.e. treating that axis
     /// as the U/D faces. Orientations are still indexed by `Corner`.
+    #[inline]
     pub fn axis_co(&self, axis: Axis) -> [CornerTwist; 8] {
         /*
         std::array::from_fn(|i| {
@@ -77,13 +78,14 @@ impl CubieCube {
 
     /// Get the edge orientation of this puzzle relative to the given axis (so quarter turns on
     /// that axis flip orientation). Orientations are still indexed by `Edge`.
+    #[inline]
     pub fn axis_eo(&self, axis: Axis) -> [EdgeFlip; 12] {
         // L/R: The orientation of E slice edges out of the E slice and U/D edges in the E slice
         //      will flip
         // U/D: The orientation of M slice edges out of the M slice and R/L edges in the M slice
         //      will flip
         use std::mem::transmute;
-        use std::simd::prelude::*;
+        use std::simd::{Select, prelude::*};
         // WHAAAT you can do this?!?! Simd infers Simd<12, u8> and 12 isn't a power of 2!!
         let eo = Simd::from_array(self.eo.map(|o| o as u8));
         let ep = Simd::from_array(self.ep.map(|p| p as u8));
@@ -118,7 +120,10 @@ impl CubieCube {
                 }) */
                 let is = Simd::from_array([1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0]);
                 // M slice edge iff 8s bit and 1s bit are unset
-                let f = (!((ep >> Simd::splat(3)) & ep) & Simd::splat(1)) ^ is;
+                let f = (ep & Simd::splat(9))
+                    .simd_eq(Simd::splat(9))
+                    .select(Simd::splat(0u8), Simd::splat(1))
+                    ^ is;
                 let r = eo ^ f;
                 // SAFETY: Same argument as with LR.
                 unsafe { transmute::<[u8; 12], [EdgeFlip; 12]>(*r.as_array()) }
