@@ -132,6 +132,7 @@ impl TryFrom<u8> for EdgeFlip {
 
 impl EdgeFlip {
     /// Flip an edge's orientation.
+    #[inline]
     pub fn flip(self) -> EdgeFlip {
         match self {
             EdgeFlip::Oriented => EdgeFlip::Flipped,
@@ -142,6 +143,7 @@ impl EdgeFlip {
     /// Flip an edge's orientation by some value.
     /// If `flip == EdgeFlip::Oriented`, do nothing to self.
     /// If `flip == EdgeFlip::Flipped`, flip self.
+    #[inline]
     pub fn flip_by(self, flip: EdgeFlip) -> EdgeFlip {
         match flip {
             EdgeFlip::Oriented => self,
