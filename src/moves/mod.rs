@@ -1,5 +1,9 @@
 //! Module for puzzle move generics and related functionality
 
+use thiserror::Error;
+
+use std::str::FromStr;
+
 /// Enum for representing the cancellation of two moves.
 /// See [`cancel`](Move::cancel).
 #[derive(Eq, PartialEq)]
@@ -59,14 +63,8 @@ pub trait Move: Eq + Clone + Sized {
 }
 
 /// A sequence of moves (also known as an algorithm) for some specific type of move.
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub struct MoveSequence<M: Move>(pub Vec<M>);
-
-impl<M: Move + std::fmt::Debug> std::fmt::Debug for MoveSequence<M> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("MoveSequence").field(&self.0).finish()
-    }
-}
 
 impl<M: Move> MoveSequence<M> {
     /// Invert a sequence of moves.
@@ -133,5 +131,136 @@ impl<M: Move> MoveSequence<M> {
         let mut seq = self.0;
         seq.append(&mut other.0);
         MoveSequence(seq)
+    }
+}
+
+impl<T: Move + FromStr> FromStr for MoveSequence<T> {
+    type Err = T::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.split_whitespace()
+            .map(|s| s.parse::<T>())
+            .collect::<Result<_, _>>()
+            .map(MoveSequence)
+    }
+}
+
+/// A "sequence" of moves, some of which are applied on the inverse of the puzzle. See the NISS
+/// fmc solving technique.
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+pub struct NissSequence<T: Move> {
+    /// The normal part of the sequence
+    pub normal: MoveSequence<T>,
+    /// The inverse part of the sequence
+    pub inverse: MoveSequence<T>,
+}
+
+/// Error for parsing `NissSequence`s.
+#[derive(Debug, PartialEq, Eq, Error)]
+pub enum NissParseError<T: Move + FromStr> {
+    /// Invalid niss bracketing was provided.
+    #[error("Invalid niss bracketing was provided")]
+    InvalidBracketing,
+    /// Failed to read a move
+    #[error("{0}")]
+    InvalidMove(T::Err),
+}
+
+impl<T: Move + FromStr> FromStr for NissSequence<T> {
+    type Err = NissParseError<T>;
+
+    fn from_str(mut s: &str) -> Result<Self, Self::Err> {
+        let mut normal = Vec::new();
+        let mut inverse = Vec::new();
+
+        while !s.is_empty() {
+            match s.split_once('(') {
+                Some((l, r)) => {
+                    let (r, s2) = r.split_once(')').ok_or(NissParseError::InvalidBracketing)?;
+                    s = s2;
+                    if r.contains('(') {
+                        return Err(NissParseError::InvalidBracketing);
+                    }
+                    let mut n = l
+                        .parse::<MoveSequence<T>>()
+                        .map_err(NissParseError::InvalidMove)?;
+                    let mut i = r
+                        .parse::<MoveSequence<T>>()
+                        .map_err(NissParseError::InvalidMove)?;
+                    normal.append(&mut n.0);
+                    inverse.append(&mut i.0);
+                }
+                None => {
+                    if s.contains(')') {
+                        return Err(NissParseError::InvalidBracketing);
+                    }
+                    let mut n = s
+                        .parse::<MoveSequence<T>>()
+                        .map_err(NissParseError::InvalidMove)?;
+                    normal.append(&mut n.0);
+                    break;
+                }
+            }
+        }
+
+        Ok(NissSequence {
+            normal: MoveSequence(normal),
+            inverse: MoveSequence(inverse),
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::cube333::moves::{Move333, Move333ParseError, Move333Type};
+    use super::*;
+    use crate::mv;
+
+    #[test]
+    fn parse() {
+        assert_eq!(
+            "R U R3".parse::<MoveSequence<Move333>>(),
+            Err(Move333ParseError("R3".to_owned()))
+        );
+        assert_eq!(
+            "R U R3".parse::<NissSequence<Move333>>(),
+            Err(NissParseError::InvalidMove(Move333ParseError(
+                "R3".to_owned()
+            )))
+        );
+        assert_eq!(
+            "R U R2".parse::<MoveSequence<Move333>>(),
+            Ok(MoveSequence(vec![mv!(R, 1), mv!(U, 1), mv!(R, 2)]))
+        );
+        assert_eq!(
+            "R U R2".parse::<NissSequence<Move333>>(),
+            Ok(NissSequence {
+                normal: MoveSequence(vec![mv!(R, 1), mv!(U, 1), mv!(R, 2)]),
+                inverse: MoveSequence(vec![])
+            })
+        );
+        assert_eq!(
+            "R (U) F (B')".parse::<NissSequence<Move333>>(),
+            Ok(NissSequence {
+                normal: MoveSequence(vec![mv!(R, 1), mv!(F, 1)]),
+                inverse: MoveSequence(vec![mv!(U, 1), mv!(B, 3)])
+            })
+        );
+        assert_eq!(
+            "R U (R()".parse::<NissSequence<Move333>>(),
+            Err(NissParseError::InvalidBracketing)
+        );
+        assert_eq!(
+            "R U )".parse::<NissSequence<Move333>>(),
+            Err(NissParseError::InvalidBracketing)
+        );
+        assert_eq!(
+            "R U (".parse::<NissSequence<Move333>>(),
+            Err(NissParseError::InvalidBracketing)
+        );
+        assert_ne!(
+            "R U ()".parse::<NissSequence<Move333>>(),
+            Err(NissParseError::InvalidBracketing)
+        );
     }
 }

@@ -1,5 +1,7 @@
 use super::CubieCube;
-use crate::moves::{Cancellation, MoveSequence};
+use crate::moves::{Cancellation, MoveSequence, NissSequence};
+
+use thiserror::Error;
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
@@ -45,6 +47,42 @@ pub struct Move333 {
     pub ty: Move333Type,
     #[cfg_attr(test, proptest(strategy = "1..=3u8"))]
     pub count: u8,
+}
+
+/// Error type for parsing `Move333`s.
+#[derive(Debug, PartialEq, Eq, Error)]
+#[error("Unknown move {0}")]
+pub struct Move333ParseError(pub(crate) String);
+
+impl std::str::FromStr for Move333 {
+    type Err = Move333ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() > 2 {
+            return Err(Move333ParseError(s.to_owned()));
+        }
+        match s.chars().nth(0) {
+            Some(c) => {
+                let ty = match c {
+                    'R' => Move333Type::R,
+                    'L' => Move333Type::L,
+                    'U' => Move333Type::U,
+                    'D' => Move333Type::D,
+                    'F' => Move333Type::F,
+                    'B' => Move333Type::B,
+                    _ => Err(Move333ParseError(s.to_owned()))?,
+                };
+                let count = match s.chars().nth(1) {
+                    None => 1,
+                    Some('2') => 2,
+                    Some('\'') => 3,
+                    Some(_) => Err(Move333ParseError(s.to_owned()))?,
+                };
+                Ok(Move333 { ty, count })
+            }
+            _ => Err(Move333ParseError(s.to_owned())),
+        }
+    }
 }
 
 impl crate::moves::Move for Move333 {
@@ -197,6 +235,14 @@ impl CubieCube {
         mvs.0.into_iter().fold(self, |c, m| c.make_move(m))
     }
 
+    /// Apply a niss sequence to a cube. The returned cube will be on the normal side.
+    pub fn make_niss_moves(self, mvs: NissSequence<Move333>) -> CubieCube {
+        self.inverse()
+            .make_moves(mvs.inverse)
+            .inverse()
+            .make_moves(mvs.normal)
+    }
+
     // This function doesn't really need to be fast since coordinates exist
     /// Apply a move to a cube.
     pub fn make_move(self, mv: Move333) -> CubieCube {
@@ -295,6 +341,28 @@ mod tests {
             });
         }
         assert_eq!(cube, CubieCube::SOLVED);
+    }
+
+    #[test]
+    fn niss_solves() {
+        // this is a couple of fmc solves i've done
+        let scr = "R' U' F U R F B' U2 F' L2 U B2 L' F' R2 D2 F' R2 F B' L2 U' R' U' F"
+            .parse()
+            .unwrap();
+        let sol = "(D' R) U2 R' F (U F2 U' R2 B2 U F) (B2 U2 R2 B2 U B2 U') (F2 R2 L2 F2 R2 F2)"
+            .parse()
+            .unwrap();
+        let c = CubieCube::SOLVED.make_moves(scr).make_niss_moves(sol);
+        assert_eq!(c, CubieCube::SOLVED);
+        // this one i needed to rewrite slice so it should not be solved
+        let scr = "R' U' F R' D' F U2 R U2 F2 L2 D2 U2 B2 R D' L' B' R D R F2 R' U' F"
+            .parse()
+            .unwrap();
+        let sol = "F (D' L' F) (R D B2 U2 D2 L) L2 U2 F2 B2 U F2 U2 F2 U' R2 B2 R2 U2"
+            .parse()
+            .unwrap();
+        let c = CubieCube::SOLVED.make_moves(scr).make_niss_moves(sol);
+        assert_ne!(c, CubieCube::SOLVED);
     }
 
     use proptest::collection::vec;
