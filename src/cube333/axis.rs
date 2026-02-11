@@ -15,6 +15,11 @@ pub enum Axis {
     UD,
 }
 
+impl Axis {
+    /// A list of all axes.
+    pub const AXES: [Axis; 3] = [Axis::FB, Axis::LR, Axis::UD];
+}
+
 impl CubieCube {
     /// Get the corner orientation of this puzzle relative to a given axis i.e. treating that axis
     /// as the U/D faces. Orientations are still indexed by `Corner`.
