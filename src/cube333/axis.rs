@@ -25,24 +25,6 @@ impl CubieCube {
     /// as the U/D faces. Orientations are still indexed by `Corner`.
     #[inline]
     pub fn axis_co(&self, axis: Axis) -> [CornerTwist; 8] {
-        /*
-        std::array::from_fn(|i| {
-            // It seems that if a corner is in its htr orbit, the co is the same as the U/D co,
-            // else it's a clockwise off if F/B and anticlockwise off if R/L (idk i just messed
-            // around on a cube and it seems true).
-            let o = self.co[i];
-            // We can compute the orbit as the index of the corner position mod 2 OR we could use
-            // funny bit hackery yayyy!! The mod 2 value is the 1s bit, and the xor is a neq.
-            let diff_orbit = (i ^ (self.cp[i] as usize)) & 1;
-
-            match (axis, diff_orbit) {
-                (Axis::FB, 1) => o.clockwise(),
-                (Axis::LR, 1) => o.anticlockwise(),
-                _ => o,
-            }
-        })
-        */
-        // wait this could be simded lol
         use std::mem::transmute;
         use std::simd::{Select, prelude::*};
         let co = u8x8::from_array(self.co.map(|o| o as u8));
@@ -51,29 +33,32 @@ impl CubieCube {
         let same_orbits = orbs.simd_eq(cp & u8x8::splat(1));
         match axis {
             Axis::FB => {
-                // add 1 mod 3
-                let a = co + u8x8::splat(1);
-                let m = a.simd_eq(u8x8::splat(3));
-                let clockwise = m.select(u8x8::splat(0), a);
+                // if a corner is in its htr orbit, its FB orientation will be its UD orientation.
+                // else, it will be an anticlockwise rotation away if its in the UFR orbit, or a
+                // clockwise rotation away if its in the UFL orbit. We compute this rotation by
+                // adding 1 or 2 mod 3
+                let a = co + u8x8::splat(2) - orbs;
+                let m = a.simd_ge(u8x8::splat(3));
+                let rotated = m.select(a - u8x8::splat(3), a);
 
                 // SAFETY: Each u8 will be one of 0, 1 or 2, which are all explicit variants of the
                 // CornerTwist enum.
                 unsafe {
                     transmute::<[u8; 8], [CornerTwist; 8]>(
-                        *same_orbits.select(co, clockwise).as_array(),
+                        *same_orbits.select(co, rotated).as_array(),
                     )
                 }
             }
             Axis::LR => {
-                // subtract 1 mod 3
-                let m = co.simd_eq(u8x8::splat(0));
-                let a = m.select(u8x8::splat(3), co);
-                let anticlockwise = a - u8x8::splat(1);
+                // we rotate by the opposite of what is rotated by in the FB case
+                let a = co + u8x8::splat(1) + orbs;
+                let m = a.simd_ge(u8x8::splat(3));
+                let rotated = m.select(a - u8x8::splat(3), a);
 
                 // SAFETY: Same as the FB branch
                 unsafe {
                     transmute::<[u8; 8], [CornerTwist; 8]>(
-                        *same_orbits.select(co, anticlockwise).as_array(),
+                        *same_orbits.select(co, rotated).as_array(),
                     )
                 }
             }
@@ -92,6 +77,8 @@ impl CubieCube {
         use std::mem::transmute;
         use std::simd::{Select, prelude::*};
         // WHAAAT you can do this?!?! Simd infers Simd<12, u8> and 12 isn't a power of 2!!
+        // It's also faster than I can get it to be with 16 lanes (simd 12 doesn't optimise well
+        // sometimes, but here it does yay)
         let eo = Simd::from_array(self.eo.map(|o| o as u8));
         let ep = Simd::from_array(self.ep.map(|p| p as u8));
         match axis {
@@ -134,5 +121,31 @@ impl CubieCube {
                 unsafe { transmute::<[u8; 12], [EdgeFlip; 12]>(*r.as_array()) }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    fn costr(s: &str) -> [CornerTwist; 8] {
+        let bs = s.as_bytes().as_array().unwrap();
+        bs.map(|b| match b {
+            b's' => CornerTwist::Oriented,
+            b'c' => CornerTwist::Clockwise,
+            b'a' => CornerTwist::AntiClockwise,
+            _ => panic!(),
+        })
+    }
+
+    #[test]
+    fn co() {
+        let c = CubieCube::SOLVED.make_moves(
+            "B' L' F R2 L' U' L' U D' R2 U2 R' D2 L2 F2 R B2 L' F2 R' B2"
+                .parse()
+                .unwrap(),
+        );
+        assert_eq!(c.axis_co(Axis::UD), costr("cscaaccc"));
+        assert_eq!(c.axis_co(Axis::FB), costr("ccsacasa"));
+        assert_eq!(c.axis_co(Axis::LR), costr("caaassas"));
     }
 }

@@ -149,7 +149,7 @@ pub struct DrSymmetry(u8);
 #[rustfmt::skip]
 const SYM_F2: CubieCube = CubieCube {
     co: [CT::Oriented; 8],
-    cp: [C::DFL, C::DFR, C::DBR, C::DBL, C::UFL, C::UFR, C::UBR, C::UBL],
+    cp: [C::DFL, C::DFR, C::DBR, C::DBL, C::UFR, C::UFL, C::UBL, C::UBR],
     eo: [EF::Oriented; 12],
     ep: [E::DF, E::DR, E::DB, E::DL, E::UF, E::UR, E::UB, E::UL, E::FL, E::FR, E::BR, E::BL],
 };
@@ -158,7 +158,7 @@ const SYM_F2: CubieCube = CubieCube {
 #[rustfmt::skip]
 const SYM_U4: CubieCube = CubieCube {
     co: [CT::Oriented; 8],
-    cp: [C::UBR, C::UFR, C::UFL, C::UBL, C::DBR, C::DFR, C::DFL, C::DBL],
+    cp: [C::UBR, C::UFR, C::UFL, C::UBL, C::DFR, C::DBR, C::DBL, C::DFL],
     eo: [EF::Oriented, EF::Oriented, EF::Oriented, EF::Oriented, EF::Oriented, EF::Oriented, EF::Oriented, EF::Oriented, EF::Flipped, EF::Flipped, EF::Flipped, EF::Flipped],
     ep: [E::UR, E::UF, E::UL, E::UB, E::DR, E::DF, E::DL, E::DB, E::BR, E::FR, E::FL, E::BL],
 };
@@ -168,7 +168,7 @@ const SYM_U4: CubieCube = CubieCube {
 #[rustfmt::skip]
 const SYM_RL2: CubieCube = CubieCube {
     co: [CT::Oriented; 8],
-    cp: [C::UBR, C::UBL, C::UFL, C::UFR, C::DBR, C::DBL, C::DFL, C::DFR],
+    cp: [C::UBR, C::UBL, C::UFL, C::UFR, C::DBL, C::DBR, C::DFR, C::DFL],
     eo: [EF::Oriented; 12],
     ep: [E::UB, E::UL, E::UF, E::UR, E::DB, E::DL, E::DF, E::DR, E::BR, E::BL, E::FL, E::FR],
 };

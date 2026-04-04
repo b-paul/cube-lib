@@ -103,7 +103,7 @@ impl FromCoordinate<CPCoord> for CubieCube {
     fn set_coord(&mut self, coord: CPCoord) {
         use crate::cube333::corner::Corner as C;
         #[rustfmt::skip]
-        let bag = vec![C::DBR, C::DBL, C::DFL, C::DFR, C::UBR, C::UBL, C::UFL, C::UFR];
+        let bag = vec![C::DBL, C::DBR, C::DFR, C::DFL, C::UBR, C::UBL, C::UFL, C::UFR];
 
         set_p_coord::<8, 0, 7, C>(coord.repr(), &mut self.cp, bag);
     }

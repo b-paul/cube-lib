@@ -1,6 +1,7 @@
 use super::{Face, StickerToPieceError};
 use crate::error::TryFromIntToEnumError;
 
+// IMPORTANT: we choose the indices of the positions so that their HTR orbit is their index mod 2
 /// An enum for every corner piece location.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[allow(missing_docs)]
@@ -10,10 +11,10 @@ pub enum Corner {
     UFL = 1,
     UBL = 2,
     UBR = 3,
-    DFR = 4,
-    DFL = 5,
-    DBL = 6,
-    DBR = 7,
+    DFL = 4,
+    DFR = 5,
+    DBR = 6,
+    DBL = 7,
 }
 
 use Corner as C;
@@ -25,10 +26,10 @@ impl std::fmt::Display for Corner {
             C::UFL => write!(f, "UFL"),
             C::UBL => write!(f, "UBL"),
             C::UBR => write!(f, "UBR"),
-            C::DFR => write!(f, "DFR"),
             C::DFL => write!(f, "DFL"),
-            C::DBL => write!(f, "DBL"),
+            C::DFR => write!(f, "DFR"),
             C::DBR => write!(f, "DBR"),
+            C::DBL => write!(f, "DBL"),
         }
     }
 }
@@ -39,10 +40,10 @@ impl Corner {
         C::UFL,
         C::UBL,
         C::UBR,
-        C::DFR,
         C::DFL,
-        C::DBL,
+        C::DFR,
         C::DBR,
+        C::DBL,
     ];
 }
 
@@ -61,10 +62,10 @@ impl TryFrom<u8> for Corner {
             1 => Ok(C::UFL),
             2 => Ok(C::UBL),
             3 => Ok(C::UBR),
-            4 => Ok(C::DFR),
-            5 => Ok(C::DFL),
-            6 => Ok(C::DBL),
-            7 => Ok(C::DBR),
+            4 => Ok(C::DFL),
+            5 => Ok(C::DFR),
+            6 => Ok(C::DBR),
+            7 => Ok(C::DBL),
             _ => Err(TryFromIntToEnumError::OutOfBounds),
         }
     }
@@ -254,10 +255,10 @@ impl From<Corner> for CornerPos {
             C::UFL => CP::UFL,
             C::UBL => CP::UBL,
             C::UBR => CP::UBR,
-            C::DFR => CP::DFR,
             C::DFL => CP::DFL,
-            C::DBL => CP::DBL,
+            C::DFR => CP::DFR,
             C::DBR => CP::DBR,
+            C::DBL => CP::DBL,
         }
     }
 }
@@ -277,18 +278,18 @@ impl From<(Corner, CornerTwist)> for CornerPos {
             (C::UBR, CT::Oriented) => CP::UBR,
             (C::UBR, CT::Clockwise) => CP::RUB,
             (C::UBR, CT::AntiClockwise) => CP::BUR,
-            (C::DFR, CT::Oriented) => CP::DFR,
-            (C::DFR, CT::Clockwise) => CP::RDF,
-            (C::DFR, CT::AntiClockwise) => CP::FDR,
             (C::DFL, CT::Oriented) => CP::DFL,
             (C::DFL, CT::Clockwise) => CP::FDL,
             (C::DFL, CT::AntiClockwise) => CP::LDF,
-            (C::DBL, CT::Oriented) => CP::DBL,
-            (C::DBL, CT::Clockwise) => CP::LDB,
-            (C::DBL, CT::AntiClockwise) => CP::BDL,
+            (C::DFR, CT::Oriented) => CP::DFR,
+            (C::DFR, CT::Clockwise) => CP::RDF,
+            (C::DFR, CT::AntiClockwise) => CP::FDR,
             (C::DBR, CT::Oriented) => CP::DBR,
             (C::DBR, CT::Clockwise) => CP::BDR,
             (C::DBR, CT::AntiClockwise) => CP::RDB,
+            (C::DBL, CT::Oriented) => CP::DBL,
+            (C::DBL, CT::Clockwise) => CP::LDB,
+            (C::DBL, CT::AntiClockwise) => CP::BDL,
         }
     }
 }
