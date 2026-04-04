@@ -93,7 +93,7 @@ impl CubieCube {
                 // wait this is even better to simd
                 let is = Simd::from_array([0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1]);
                 // >= 8 iff 8s bit is set since edge positions are <= 12
-                let f = (ep >> Simd::splat(3)) & is;
+                let f = (ep >> Simd::splat(3)) ^ is;
                 let r = eo ^ f;
                 // SAFETY: eo contains only values 0 or 1, and f is bitwise and with is and so also
                 // only has values 0 or 1. EdgeFlip has 0 and 1 as its explicit variants.
@@ -111,10 +111,10 @@ impl CubieCube {
                     }
                 }) */
                 let is = Simd::from_array([1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0]);
-                // M slice edge iff 8s bit and 1s bit are unset
+                // M slice edge iff 8s bit and 1s bit are unset i.e. iff &9 == 0
                 let f = (ep & Simd::splat(9))
-                    .simd_eq(Simd::splat(9))
-                    .select(Simd::splat(0u8), Simd::splat(1))
+                    .simd_eq(Simd::splat(0))
+                    .select(Simd::splat(1u8), Simd::splat(0))
                     ^ is;
                 let r = eo ^ f;
                 // SAFETY: Same argument as with LR.
@@ -147,5 +147,26 @@ mod test {
         assert_eq!(c.axis_co(Axis::UD), costr("cscaaccc"));
         assert_eq!(c.axis_co(Axis::FB), costr("ccsacasa"));
         assert_eq!(c.axis_co(Axis::LR), costr("caaassas"));
+    }
+
+    fn eostr(s: &str) -> [EdgeFlip; 12] {
+        let bs = s.as_bytes().as_array().unwrap();
+        bs.map(|b| match b {
+            b's' => EdgeFlip::Oriented,
+            b'f' => EdgeFlip::Flipped,
+            _ => panic!(),
+        })
+    }
+
+    #[test]
+    fn eo() {
+        let c = CubieCube::SOLVED.make_moves(
+            "B' L' F R2 L' U' L' U D' R2 U2 R' D2 L2 F2 R B2 L' F2 R' B2"
+                .parse()
+                .unwrap(),
+        );
+        assert_eq!(c.axis_eo(Axis::FB), eostr("fffssfsfffsf"));
+        assert_eq!(c.axis_eo(Axis::LR), eostr("fffsffssfffs"));
+        assert_eq!(c.axis_eo(Axis::UD), eostr("fsssfsffffss"));
     }
 }
