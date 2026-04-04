@@ -40,13 +40,23 @@ impl Move333Type {
 }
 
 /// Stores a move type and counter. An anti-clockwise move will have a count of 3.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(test, derive(Arbitrary))]
 #[allow(missing_docs)]
 pub struct Move333 {
     pub ty: Move333Type,
     #[cfg_attr(test, proptest(strategy = "1..=3u8"))]
     pub count: u8,
+}
+
+impl std::fmt::Display for Move333 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.count {
+            1 => write!(f, "{:?}", self.ty),
+            3 => write!(f, "{:?}'", self.ty),
+            _ => write!(f, "{:?}{}", self.ty, self.count),
+        }
+    }
 }
 
 /// Error type for parsing `Move333`s.
@@ -112,17 +122,6 @@ impl crate::moves::Move for Move333 {
             }
         } else {
             Cancellation::TwoMove(self, b)
-        }
-    }
-}
-
-// I don't want to have the default derive debug for this!
-impl std::fmt::Debug for Move333 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.count {
-            1 => write!(f, "{:?}", self.ty),
-            3 => write!(f, "{:?}'", self.ty),
-            _ => write!(f, "{:?}{}", self.ty, self.count),
         }
     }
 }

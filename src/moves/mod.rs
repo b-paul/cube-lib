@@ -133,6 +133,19 @@ impl<M: Move> MoveSequence<M> {
         MoveSequence(seq)
     }
 }
+use std::fmt::Display;
+impl<T: Move + Display> Display for MoveSequence<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(
+            &self
+                .0
+                .iter()
+                .map(|m| m.to_string())
+                .collect::<Vec<_>>()
+                .join(" "),
+        )
+    }
+}
 
 impl<T: Move + FromStr> FromStr for MoveSequence<T> {
     type Err = T::Err;
@@ -153,6 +166,17 @@ pub struct NissSequence<T: Move> {
     pub normal: MoveSequence<T>,
     /// The inverse part of the sequence
     pub inverse: MoveSequence<T>,
+}
+
+impl<T: Move + Display> Display for NissSequence<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match (self.normal.is_empty(), self.inverse.is_empty()) {
+            (true, true) => Ok(()),
+            (true, false) => write!(f, "({})", self.inverse),
+            (false, true) => write!(f, "{}", self.normal),
+            (false, false) => write!(f, "{} ({})", self.normal, self.inverse),
+        }
+    }
 }
 
 /// Error for parsing `NissSequence`s.
@@ -261,6 +285,31 @@ mod tests {
         assert_ne!(
             "R U ()".parse::<NissSequence<Move333>>(),
             Err(NissParseError::InvalidBracketing)
+        );
+    }
+
+    #[test]
+    fn print() {
+        assert_eq!(
+            "R U R2"
+                .parse::<MoveSequence<Move333>>()
+                .unwrap()
+                .to_string(),
+            "R U R2".to_string()
+        );
+        assert_eq!(
+            "R U R2"
+                .parse::<NissSequence<Move333>>()
+                .unwrap()
+                .to_string(),
+            "R U R2".to_string()
+        );
+        assert_eq!(
+            "R (U) F (B')"
+                .parse::<NissSequence<Move333>>()
+                .unwrap()
+                .to_string(),
+            "R F (U B')".to_string(),
         );
     }
 }
