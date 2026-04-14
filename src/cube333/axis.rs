@@ -1,7 +1,5 @@
 //! Interpret properties of a cube relative to given axes (U/D, L/R, F/B).
 
-// TODO proptest this properly after having nice rotation logic on the sticker cube
-
 use super::{CornerTwist, CubieCube, EdgeFlip};
 
 /// An axis of the cube.
