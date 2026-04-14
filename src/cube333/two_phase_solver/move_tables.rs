@@ -188,8 +188,6 @@ impl SubMove for Move333 {
     }
 }
 
-// TODO proptest DrMoves preserve phase 2
-
 /// A move in domino reduction (phase 2).
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(test, derive(Arbitrary))]

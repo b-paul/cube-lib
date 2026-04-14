@@ -14,7 +14,7 @@ use crate::cube333::{CubieCube, moves::Move333};
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-// TODO future stuff:
+// NOTE future stuff:
 //  look into alternative pruning table choices
 //  look into alternative information to store in pruning tables
 //  look into alternative compression schemes

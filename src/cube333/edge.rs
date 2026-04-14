@@ -1,6 +1,7 @@
-use super::{Face, StickerToPieceError};
+use super::{Face, StickerToPieceError, axis::Axis};
 use crate::error::TryFromIntToEnumError;
 
+// NOTE: these enum discriminants are assumed in unsafe code!
 /// An enum for every edge piece location.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[allow(missing_docs)]
@@ -219,9 +220,7 @@ impl EdgePos {
         }
     }
 
-    // TODO implement eo for other axes.
-
-    /// Returns the eo of a piece with respect to the F/B axis.
+    /// Returns the orientation of a position with respect to the F/B axis.
     pub fn fb_orientation(self) -> EdgeFlip {
         match self {
             EP::UB => EF::Oriented,
@@ -248,6 +247,75 @@ impl EdgePos {
             EP::DR => EF::Oriented,
             EP::DB => EF::Oriented,
             EP::DL => EF::Oriented,
+        }
+    }
+
+    /// Returns the orientation of a position with respect to the L/R axis.
+    pub fn lr_orientation(self) -> EdgeFlip {
+        match self {
+            EdgePos::UB => EF::Oriented,
+            EdgePos::UR => EF::Oriented,
+            EdgePos::UF => EF::Oriented,
+            EdgePos::UL => EF::Oriented,
+            EdgePos::LU => EF::Flipped,
+            EdgePos::LF => EF::Oriented,
+            EdgePos::LD => EF::Flipped,
+            EdgePos::LB => EF::Oriented,
+            EdgePos::FU => EF::Flipped,
+            EdgePos::FR => EF::Flipped,
+            EdgePos::FD => EF::Flipped,
+            EdgePos::FL => EF::Flipped,
+            EdgePos::RU => EF::Flipped,
+            EdgePos::RB => EF::Oriented,
+            EdgePos::RD => EF::Flipped,
+            EdgePos::RF => EF::Oriented,
+            EdgePos::BU => EF::Flipped,
+            EdgePos::BL => EF::Flipped,
+            EdgePos::BD => EF::Flipped,
+            EdgePos::BR => EF::Flipped,
+            EdgePos::DF => EF::Oriented,
+            EdgePos::DR => EF::Oriented,
+            EdgePos::DB => EF::Oriented,
+            EdgePos::DL => EF::Oriented,
+        }
+    }
+
+    /// Returns the orientation of a position with respect to the F/B axis.
+    pub fn ud_orientation(self) -> EdgeFlip {
+        match self {
+            EdgePos::UB => EF::Flipped,
+            EdgePos::UR => EF::Oriented,
+            EdgePos::UF => EF::Flipped,
+            EdgePos::UL => EF::Oriented,
+            EdgePos::LU => EF::Flipped,
+            EdgePos::LF => EF::Flipped,
+            EdgePos::LD => EF::Flipped,
+            EdgePos::LB => EF::Flipped,
+            EdgePos::FU => EF::Oriented,
+            EdgePos::FR => EF::Oriented,
+            EdgePos::FD => EF::Oriented,
+            EdgePos::FL => EF::Oriented,
+            EdgePos::RU => EF::Flipped,
+            EdgePos::RB => EF::Flipped,
+            EdgePos::RD => EF::Flipped,
+            EdgePos::RF => EF::Flipped,
+            EdgePos::BU => EF::Oriented,
+            EdgePos::BL => EF::Oriented,
+            EdgePos::BD => EF::Oriented,
+            EdgePos::BR => EF::Oriented,
+            EdgePos::DF => EF::Flipped,
+            EdgePos::DR => EF::Oriented,
+            EdgePos::DB => EF::Flipped,
+            EdgePos::DL => EF::Oriented,
+        }
+    }
+
+    /// Returns the orientation of a position with respect to the given axis.
+    pub fn axis_orientation(self, axis: Axis) -> EdgeFlip {
+        match axis {
+            Axis::FB => self.fb_orientation(),
+            Axis::LR => self.lr_orientation(),
+            Axis::UD => self.ud_orientation(),
         }
     }
 }

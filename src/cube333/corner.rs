@@ -1,7 +1,8 @@
-use super::{Face, StickerToPieceError};
+use super::{Face, StickerToPieceError, axis::Axis};
 use crate::error::TryFromIntToEnumError;
 
 // IMPORTANT: we choose the indices of the positions so that their HTR orbit is their index mod 2
+// NOTE: these enum discriminants are assumed in unsafe code!
 /// An enum for every corner piece location.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[allow(missing_docs)]
@@ -217,7 +218,7 @@ impl CornerPos {
         }
     }
 
-    /// Returns the orientation of a sticker with respect to the U/D axis
+    /// Returns the orientation of a position with respect to the U/D axis.
     pub fn ud_orientation(self) -> CornerTwist {
         match self {
             CP::UBL => CT::Oriented,
@@ -244,6 +245,75 @@ impl CornerPos {
             CP::DBR => CT::Oriented,
             CP::DBL => CT::Oriented,
             CP::DFL => CT::Oriented,
+        }
+    }
+
+    /// Returns the orientation of a position with respect to the F/B axis.
+    pub fn fb_orientation(self) -> CornerTwist {
+        match self {
+            CornerPos::UBL => CT::Clockwise,
+            CornerPos::UBR => CT::AntiClockwise,
+            CornerPos::UFR => CT::Clockwise,
+            CornerPos::UFL => CT::AntiClockwise,
+            CornerPos::LUB => CT::AntiClockwise,
+            CornerPos::LUF => CT::Clockwise,
+            CornerPos::LDF => CT::AntiClockwise,
+            CornerPos::LDB => CT::Clockwise,
+            CornerPos::FUL => CT::Oriented,
+            CornerPos::FUR => CT::Oriented,
+            CornerPos::FDR => CT::Oriented,
+            CornerPos::FDL => CT::Oriented,
+            CornerPos::RUF => CT::AntiClockwise,
+            CornerPos::RUB => CT::Clockwise,
+            CornerPos::RDB => CT::AntiClockwise,
+            CornerPos::RDF => CT::Clockwise,
+            CornerPos::BUR => CT::Oriented,
+            CornerPos::BUL => CT::Oriented,
+            CornerPos::BDL => CT::Oriented,
+            CornerPos::BDR => CT::Oriented,
+            CornerPos::DFR => CT::AntiClockwise,
+            CornerPos::DBR => CT::Clockwise,
+            CornerPos::DBL => CT::AntiClockwise,
+            CornerPos::DFL => CT::Clockwise,
+        }
+    }
+
+    /// Returns the orientation of a position with respect to the L/R axis.
+    pub fn lr_orientation(self) -> CornerTwist {
+        match self {
+            CornerPos::UBL => CT::AntiClockwise,
+            CornerPos::UBR => CT::Clockwise,
+            CornerPos::UFR => CT::AntiClockwise,
+            CornerPos::UFL => CT::Clockwise,
+            CornerPos::LUB => CT::Oriented,
+            CornerPos::LUF => CT::Oriented,
+            CornerPos::LDF => CT::Oriented,
+            CornerPos::LDB => CT::Oriented,
+            CornerPos::FUL => CT::AntiClockwise,
+            CornerPos::FUR => CT::Clockwise,
+            CornerPos::FDR => CT::AntiClockwise,
+            CornerPos::FDL => CT::Clockwise,
+            CornerPos::RUF => CT::Oriented,
+            CornerPos::RUB => CT::Oriented,
+            CornerPos::RDB => CT::Oriented,
+            CornerPos::RDF => CT::Oriented,
+            CornerPos::BUR => CT::AntiClockwise,
+            CornerPos::BUL => CT::Clockwise,
+            CornerPos::BDL => CT::AntiClockwise,
+            CornerPos::BDR => CT::Clockwise,
+            CornerPos::DFR => CT::Clockwise,
+            CornerPos::DBR => CT::AntiClockwise,
+            CornerPos::DBL => CT::Clockwise,
+            CornerPos::DFL => CT::AntiClockwise,
+        }
+    }
+
+    /// Returns the orientation of a position with respect to the given axis.
+    pub fn axis_orientation(self, axis: Axis) -> CornerTwist {
+        match axis {
+            Axis::UD => self.ud_orientation(),
+            Axis::FB => self.fb_orientation(),
+            Axis::LR => self.lr_orientation(),
         }
     }
 }

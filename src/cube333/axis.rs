@@ -169,4 +169,37 @@ mod test {
         assert_eq!(c.axis_eo(Axis::LR), eostr("fffsffssfffs"));
         assert_eq!(c.axis_eo(Axis::UD), eostr("fsssfsffffss"));
     }
+
+    use crate::{
+        cube333::{CornerPos as CP, CubieCube, EdgePos as EP, StickerCube, moves::Move333},
+        moves::MoveSequence,
+    };
+    use proptest::collection::vec;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn prop_co(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence)) {
+            let c = CubieCube::SOLVED.make_moves(mvs);
+            let s: StickerCube = c.clone().into();
+            const UD_I: [CP; 8] = [CP::UFR, CP::UFL, CP::UBL, CP::UBR, CP::DFL, CP::DFR, CP::DBR, CP::DBL];
+            const FB_I: [CP; 8] = [CP::FUR, CP::FUL, CP::BUL, CP::BUR, CP::FDL, CP::FDR, CP::BDR, CP::BDL];
+            const LR_I: [CP; 8] = [CP::RUF, CP::LUF, CP::LUB, CP::RUB, CP::LDF, CP::RDF, CP::RDB, CP::LDB];
+            assert_eq!(c.axis_co(Axis::UD), UD_I.map(|p| s.corner_at(p).unwrap().ud_orientation().inverse()));
+            assert_eq!(c.axis_co(Axis::FB), FB_I.map(|p| s.corner_at(p).unwrap().fb_orientation().inverse()));
+            assert_eq!(c.axis_co(Axis::LR), LR_I.map(|p| s.corner_at(p).unwrap().lr_orientation().inverse()));
+        }
+
+        #[test]
+        fn prop_eo(mvs in vec(any::<Move333>(), 0..20).prop_map(MoveSequence)) {
+            let c = CubieCube::SOLVED.make_moves(mvs);
+            let s: StickerCube = c.clone().into();
+            const FB_I: [EP; 12] = [EP::UF, EP::UL, EP::UB, EP::UR, EP::DF, EP::DL, EP::DB, EP::DR, EP::FR, EP::FL, EP::BL, EP::BR];
+            const LR_I: [EP; 12] = [EP::UF, EP::UL, EP::UB, EP::UR, EP::DF, EP::DL, EP::DB, EP::DR, EP::RF, EP::LF, EP::LB, EP::RB];
+            const UD_I: [EP; 12] = [EP::FU, EP::UL, EP::BU, EP::UR, EP::FD, EP::DL, EP::BD, EP::DR, EP::FR, EP::FL, EP::BL, EP::BR];
+            assert_eq!(c.axis_eo(Axis::FB), FB_I.map(|p| s.edge_at(p).unwrap().fb_orientation()));
+            assert_eq!(c.axis_eo(Axis::LR), LR_I.map(|p| s.edge_at(p).unwrap().lr_orientation()));
+            assert_eq!(c.axis_eo(Axis::UD), UD_I.map(|p| s.edge_at(p).unwrap().ud_orientation()));
+        }
+    }
 }
