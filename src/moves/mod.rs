@@ -236,7 +236,7 @@ impl<T: Move + FromStr> FromStr for NissSequence<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::cube333::moves::{Move333, Move333ParseError, Move333Type};
+    use super::super::cube333::moves::{Move333, Move333ParseError};
     use super::*;
     use crate::mv;
 

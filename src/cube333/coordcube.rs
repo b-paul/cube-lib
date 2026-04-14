@@ -330,7 +330,7 @@ mod tests {
     use crate::cube333::{
         Corner, CornerTwist, CubieCube, Edge, EdgeFlip, StickerCube,
         coordcube::{CoordCube, CubieToCoordError},
-        moves::{Move333, Move333Type},
+        moves::Move333,
     };
     use crate::mv;
 

@@ -143,13 +143,12 @@ impl From<Move333> for usize {
     }
 }
 
-/// Create a move by specifying a move type and move count. Note that you do not need to specify
-/// for example Move333Type::R, you only need to specify R. (TODO this might not be a good idea).
+/// Create a move by specifying a move type and move count.
 #[macro_export]
 macro_rules! mv {
     ($ty:ident, $count: expr) => {
         Move333 {
-            ty: Move333Type::$ty,
+            ty: $crate::cube333::moves::Move333Type::$ty,
             count: $count,
         }
     };
