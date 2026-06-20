@@ -72,6 +72,78 @@ impl Edge {
     pub fn s_slice(&self) -> bool {
         matches!(self, E::UL | E::UR | E::DL | E::DR)
     }
+
+    /// Apply a 120 degree clockwise rotation through the UFR and DBL corners to an edge
+    pub fn apply_diag(self) -> Self {
+        match self {
+            Edge::UF => Edge::UR,
+            Edge::UL => Edge::BR,
+            Edge::UB => Edge::DR,
+            Edge::UR => Edge::FR,
+            Edge::DF => Edge::UL,
+            Edge::DL => Edge::BL,
+            Edge::DB => Edge::DL,
+            Edge::DR => Edge::FL,
+            Edge::FR => Edge::UF,
+            Edge::FL => Edge::UB,
+            Edge::BL => Edge::DB,
+            Edge::BR => Edge::DF,
+        }
+    }
+
+    /// Apply a y rotation to an edge
+    pub fn apply_y(self) -> Self {
+        match self {
+            Edge::UF => Edge::UL,
+            Edge::UL => Edge::UB,
+            Edge::UB => Edge::UR,
+            Edge::UR => Edge::UF,
+            Edge::DF => Edge::DL,
+            Edge::DL => Edge::DB,
+            Edge::DB => Edge::DR,
+            Edge::DR => Edge::DF,
+            Edge::FR => Edge::FL,
+            Edge::FL => Edge::BL,
+            Edge::BL => Edge::BR,
+            Edge::BR => Edge::FR,
+        }
+    }
+
+    /// Apply a z2 to an edge
+    pub fn apply_z2(self) -> Self {
+        match self {
+            Edge::UF => Edge::DF,
+            Edge::UL => Edge::DR,
+            Edge::UB => Edge::DB,
+            Edge::UR => Edge::DL,
+            Edge::DF => Edge::UF,
+            Edge::DL => Edge::UR,
+            Edge::DB => Edge::UB,
+            Edge::DR => Edge::UL,
+            Edge::FR => Edge::FL,
+            Edge::FL => Edge::FR,
+            Edge::BL => Edge::BR,
+            Edge::BR => Edge::BL,
+        }
+    }
+
+    /// Apply a reflection along the m slice to an edge
+    pub fn apply_rl2(self) -> Self {
+        match self {
+            Edge::UF => Edge::UF,
+            Edge::UL => Edge::UR,
+            Edge::UB => Edge::UB,
+            Edge::UR => Edge::UL,
+            Edge::DF => Edge::DF,
+            Edge::DL => Edge::DR,
+            Edge::DB => Edge::DB,
+            Edge::DR => Edge::DL,
+            Edge::FR => Edge::FL,
+            Edge::FL => Edge::FR,
+            Edge::BL => Edge::BR,
+            Edge::BR => Edge::BL,
+        }
+    }
 }
 
 impl From<Edge> for u8 {

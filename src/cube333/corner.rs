@@ -46,6 +46,62 @@ impl Corner {
         C::DBR,
         C::DBL,
     ];
+
+    /// Apply a 120 degree clockwise rotation through the UFR and DBL corners to a corner
+    pub fn apply_diag(self) -> Self {
+        match self {
+            Corner::UFR => Corner::UFR,
+            Corner::UFL => Corner::UBR,
+            Corner::UBL => Corner::DBR,
+            Corner::UBR => Corner::DFR,
+            Corner::DFL => Corner::UBL,
+            Corner::DFR => Corner::UFL,
+            Corner::DBR => Corner::DFL,
+            Corner::DBL => Corner::DBL,
+        }
+    }
+
+    /// Apply a y rotation to a corner
+    pub fn apply_y(self) -> Self {
+        match self {
+            Corner::UFR => Corner::UFL,
+            Corner::UFL => Corner::UBL,
+            Corner::UBL => Corner::UBR,
+            Corner::UBR => Corner::UFR,
+            Corner::DFL => Corner::DBL,
+            Corner::DFR => Corner::DFL,
+            Corner::DBR => Corner::DFR,
+            Corner::DBL => Corner::DBR,
+        }
+    }
+
+    /// Apply a z2 to a corner
+    pub fn apply_z2(self) -> Self {
+        match self {
+            Corner::UFR => Corner::DFL,
+            Corner::UFL => Corner::DFR,
+            Corner::UBL => Corner::DBR,
+            Corner::UBR => Corner::DBL,
+            Corner::DFL => Corner::UFR,
+            Corner::DFR => Corner::UFL,
+            Corner::DBR => Corner::UBL,
+            Corner::DBL => Corner::UBR,
+        }
+    }
+
+    /// Apply a reflection along the m slice to a corner
+    pub fn apply_rl2(self) -> Self {
+        match self {
+            Corner::UFR => Corner::UFL,
+            Corner::UFL => Corner::UFR,
+            Corner::UBL => Corner::UBR,
+            Corner::UBR => Corner::UBL,
+            Corner::DFL => Corner::DFR,
+            Corner::DFR => Corner::DFL,
+            Corner::DBR => Corner::DBL,
+            Corner::DBL => Corner::DBR,
+        }
+    }
 }
 
 impl From<Corner> for u8 {
