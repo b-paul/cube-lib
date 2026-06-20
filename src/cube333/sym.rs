@@ -30,8 +30,7 @@ impl CubeSymmetry {
         let diag = (0..self.diag3()).fold(e, |e, _| e.apply_diag());
         let u4 = (0..self.u4()).fold(diag, |e, _| e.apply_y());
         let f2 = (0..self.f2()).fold(u4, |e, _| e.apply_z2());
-        let rl2 = (0..self.rl2()).fold(f2, |e, _| e.apply_rl2());
-        rl2
+        (0..self.rl2()).fold(f2, |e, _| e.apply_rl2())
     }
 
     /// Apply a symmetry to a corner position.
@@ -39,8 +38,7 @@ impl CubeSymmetry {
         let diag = (0..self.diag3()).fold(c, |c, _| c.apply_diag());
         let u4 = (0..self.u4()).fold(diag, |c, _| c.apply_y());
         let f2 = (0..self.f2()).fold(u4, |c, _| c.apply_z2());
-        let rl2 = (0..self.rl2()).fold(f2, |c, _| c.apply_rl2());
-        rl2
+        (0..self.rl2()).fold(f2, |c, _| c.apply_rl2())
     }
 }
 
